@@ -1,0 +1,6 @@
+flask
+gunicorn
+gevent
+groq
+openai
+python-dotenv

@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TranscriVoz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --surface-2: #0f3460;
+            --primary: #0078d4;
+            --accent: #50e6ff;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --error: #ff4757;
+            --success: #2ed573;
+            --font-mono: 'Space Mono', monospace;
+            --font-sans: 'DM Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem 1rem 3rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        .btn {
+            font-family: var(--font-sans);
+            padding: 0.5rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #005fa3; }
+        .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid #ffffff20; }
+        .btn-secondary:hover { background: #1a4a80; }
+        .btn-accent { background: var(--accent); color: #1a1a2e; font-weight: 700; }
+        .btn-accent:hover { background: #3dd4ed; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Login */
+        .login-card {
+            background: var(--surface);
+            border: 1px solid #ffffff10;
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-top: 15vh;
+        }
+
+        .login-card h2 {
+            font-family: var(--font-mono);
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .login-card p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 0.7rem 1rem;
+            background: var(--bg);
+            border: 1px solid #ffffff20;
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .input-group input:focus { border-color: var(--accent); }
+
+        .login-error {
+            color: var(--error);
+            font-size: 0.85rem;
+            margin-top: 0.8rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid #ffffff10;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.2rem;
+        }
+
+        /* Upload zone */
+        .drop-zone {
+            border: 2px dashed #ffffff25;
+            border-radius: 10px;
+            padding: 2.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: #50e6ff08;
+        }
+
+        .upload-description {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .drop-zone-icon { font-size: 2.5rem; margin-bottom: 0.5rem; display: block; }
+        .drop-zone-text { color: var(--text-muted); font-size: 0.9rem; }
+        .drop-zone-text strong { color: var(--accent); }
+
+        .drop-zone-formats {
+            margin-top: 0.8rem;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .file-info {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding: 0.8rem 1rem;
+            background: var(--bg);
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        .file-info .name { color: var(--accent); word-break: break-all; }
+        .file-info .size { color: var(--text-muted); white-space: nowrap; margin-left: 1rem; }
+
+        .upload-actions {
+            display: none;
+            margin-top: 1rem;
+            text-align: right;
+        }
+
+        /* Chunk selector */
+        .chunks-section { display: none; }
+
+        .chunks-title {
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .rate-limit-banner {
+            background: #ff475715;
+            border: 1px solid #ff475740;
+            border-radius: 8px;
+            padding: 0.7rem 1rem;
+            margin-bottom: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #ff8a80;
+            text-align: center;
+        }
+
+        .rate-limit-banner span {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .chunk-list { list-style: none; }
+
+        .chunk-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.7rem 1rem;
+            background: var(--bg);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .chunk-item:hover { background: var(--surface-2); }
+
+        .chunk-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .chunk-item .chunk-label {
+            font-family: var(--font-mono);
+            color: var(--accent);
+            font-weight: 700;
+            min-width: 70px;
+        }
+
+        .chunk-item .chunk-detail {
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        .chunk-item.done {
+            opacity: 0.5;
+        }
+
+        .chunk-item.done .chunk-label::after {
+            content: " (hecho)";
+            color: var(--success);
+            font-weight: 400;
+            font-size: 0.75rem;
+        }
+
+        .chunks-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .select-helpers {
+            margin-right: auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .select-helpers button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: var(--font-sans);
+            text-decoration: underline;
+        }
+
+        /* Progress */
+        .progress-section { display: none; }
+
+        .progress-bar-container {
+            background: var(--bg);
+            border-radius: 8px;
+            overflow: hidden;
+            height: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 8px;
+        }
+
+        .progress-percent {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-align: right;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-log {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .status-log .entry { padding: 0.2rem 0; }
+        .status-log .entry:last-child { color: var(--text); }
+
+        /* Result */
+        .result-section { display: none; }
+
+        .result-textarea {
+            width: 100%;
+            min-height: 300px;
+            background: var(--bg);
+            border: 1px solid #ffffff10;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            line-height: 1.6;
+            color: var(--text);
+            resize: vertical;
+            outline: none;
+        }
+
+        .result-textarea:focus { border-color: var(--accent); }
+
+        .result-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .copy-feedback {
+            color: var(--success);
+            font-size: 0.85rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            margin-right: auto;
+            align-self: center;
+        }
+
+        /* Settings modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid #ffffff15;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .modal h3 {
+            font-family: var(--font-mono);
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg);
+            border: 1px solid #ffffff20;
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--accent);
+        }
+
+        .form-group select {
+            cursor: pointer;
+        }
+
+        .form-group select option {
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .form-group .hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .settings-msg {
+            font-size: 0.85rem;
+            margin-top: 0.8rem;
+            min-height: 1.2em;
+        }
+
+        .settings-msg.ok { color: var(--success); }
+        .settings-msg.err { color: var(--error); }
+
+        /* Help */
+        .help-content {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .help-item {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+            align-items: flex-start;
+        }
+
+        .help-item p {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            margin-top: 0.2rem;
+            line-height: 1.5;
+        }
+
+        .help-item strong {
+            font-size: 0.9rem;
+        }
+
+        .help-step {
+            min-width: 30px;
+            height: 30px;
+            background: var(--surface-2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .help-divider {
+            border-top: 1px solid #ffffff10;
+            margin: 1rem 0;
+        }
+
+        /* Error */
+        .error-message {
+            display: none;
+            background: #ff475715;
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 1rem;
+            color: var(--error);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Footer */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 0.8rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg);
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .footer a:hover { text-decoration: underline; }
+
+        /* Responsive */
+        @media (max-width: 500px) {
+            body { padding: 1rem 0.5rem; }
+            .header h1 { font-size: 1.2rem; }
+            .drop-zone { padding: 1.5rem 0.5rem; }
+            .result-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if not authenticated %}
+        <!-- LOGIN -->
+        <div class="login-card">
+            <h2>TranscriVoz</h2>
+            <p>Ingresa la contraseña para continuar</p>
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="input-group">
+                    <input type="password" name="password" placeholder="Contraseña" autofocus>
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                </div>
+            </form>
+            {% if login_error %}
+            <div class="login-error">{{ login_error }}</div>
+            {% endif %}
+        </div>
+
+        {% else %}
+        <!-- MAIN APP -->
+        <div class="header">
+            <h1>TranscriVoz</h1>
+            <div style="display:flex; gap:0.5rem;">
+                <button class="btn btn-secondary" onclick="openHelp()" title="Ayuda">?</button>
+                <button class="btn btn-secondary" onclick="openSettings()" title="Configuracion">&#9881;</button>
+                <button class="btn btn-secondary" onclick="cleanupFiles()">Limpiar archivos</button>
+                <form method="POST" action="{{ url_for('logout') }}" style="margin:0">
+                    <button type="submit" class="btn btn-secondary">Salir</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Error display -->
+        <div class="error-message" id="errorMsg"></div>
+
+        <!-- Upload -->
+        <div class="card" id="uploadCard">
+            <div class="upload-description">
+                Transcribi tus clases o audios facilmente con la API de Groq
+            </div>
+            <div class="drop-zone" id="dropZone">
+                <span class="drop-zone-icon">&#127908;</span>
+                <div class="drop-zone-text">
+                    Arrastra tu archivo aqui o <strong>hace click para seleccionar</strong>
+                </div>
+                <div class="drop-zone-formats">
+                    MP4, MP3, M4A, WAV, OGG, WEBM, FLAC, AAC, WMA — max 1 GB
+                </div>
+                <input type="file" id="fileInput" accept=".mp3,.mp4,.m4a,.wav,.ogg,.webm,.flac,.aac,.wma" hidden>
+            </div>
+            <div class="file-info" id="fileInfo">
+                <span class="name" id="fileName"></span>
+                <span class="size" id="fileSize"></span>
+            </div>
+            <div class="upload-actions" id="uploadActions">
+                <button class="btn btn-accent" id="btnSubir" onclick="uploadFile()">
+                    Subir y preparar
+                </button>
+            </div>
+        </div>
+
+        <!-- Chunk selector -->
+        <div class="card chunks-section" id="chunksSection">
+            <div class="chunks-title">Selecciona las partes a transcribir:</div>
+            <div class="rate-limit-banner" id="rateLimitBanner" style="display:none">
+                API en espera — disponible en <span id="rateLimitTime">--</span>
+            </div>
+            <ul class="chunk-list" id="chunkList"></ul>
+            <div class="chunks-actions">
+                <div class="select-helpers">
+                    <button onclick="selectAll()">Todas</button>
+                    <button onclick="selectNone()">Ninguna</button>
+                </div>
+                <button class="btn btn-accent" id="btnTranscribir" onclick="startTranscription()">
+                    Transcribir seleccionadas
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="card progress-section" id="progressSection">
+            <div class="progress-percent" id="progressPercent">0%</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="status-log" id="statusLog"></div>
+            <div style="text-align:right; margin-top:1rem;">
+                <button class="btn btn-secondary" onclick="backToChunks()">Volver al selector</button>
+            </div>
+        </div>
+
+        <!-- Result -->
+        <div class="card result-section" id="resultSection">
+            <textarea class="result-textarea" id="resultText" readonly></textarea>
+            <div class="result-actions">
+                <span class="copy-feedback" id="copyFeedback">Copiado!</span>
+                <button class="btn btn-secondary" onclick="copyResult()">Copiar</button>
+                <button class="btn btn-primary" onclick="downloadResult()">Descargar .txt</button>
+                <button class="btn btn-accent" id="btnRetry" onclick="showChunksForRetry()" style="display:none">
+                    Reintentar partes faltantes
+                </button>
+                <button class="btn btn-accent" id="btnMoreParts" onclick="showChunksForMore()" style="display:none">
+                    Transcribir mas partes
+                </button>
+                <button class="btn btn-secondary" onclick="resetApp()">Nuevo archivo</button>
+            </div>
+        </div>
+
+        <!-- Help modal -->
+        <div class="modal-overlay" id="helpModal">
+            <div class="modal" style="max-width:550px;">
+                <h3>Como usar</h3>
+                <div class="help-content">
+                    <div class="help-item">
+                        <div class="help-step">1</div>
+                        <div>
+                            <strong>Subi tu archivo</strong>
+                            <p>Arrastra o selecciona un video o audio de clase. Se acepta MP4, MP3, WAV, M4A, OGG, WEBM, FLAC, AAC y WMA de hasta 1 GB.</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <div class="help-step">2</div>
+                        <div>
+                            <strong>Selecciona las partes</strong>
+                            <p>El audio se divide automaticamente en partes de ~19 MB. Podes elegir cuales transcribir. Esto es util para dividir el trabajo entre varias cuentas de Groq o para hacerlo en etapas.</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <div class="help-step">3</div>
+                        <div>
+                            <strong>Espera la transcripcion</strong>
+                            <p>Cada parte se envia al proveedor seleccionado (Groq o OpenAI). Si llegas al limite de la API, la app espera automaticamente y reintenta. Podes volver al selector mientras tanto.</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <div class="help-step">4</div>
+                        <div>
+                            <strong>Copia o descarga el resultado</strong>
+                            <p>La transcripcion aparece con timestamps [MM:SS]. Podes copiarla al portapapeles o descargarla como .txt.</p>
+                        </div>
+                    </div>
+                    <div class="help-divider"></div>
+                    <div class="help-item">
+                        <div class="help-step">&#9881;</div>
+                        <div>
+                            <strong>Configuracion</strong>
+                            <p>Desde el engranaje podes elegir el proveedor (Groq gratis o OpenAI pago), cambiar la API key y seleccionar el modelo.</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <div class="help-step">&#128218;</div>
+                        <div>
+                            <strong>Limites del plan gratuito</strong>
+                            <p>Groq permite ~2 horas de audio por hora gratis. OpenAI cobra $0.006/min pero no tiene limite. Podes cambiar de proveedor en cualquier momento desde configuracion.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="closeHelp()">Entendido</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings modal -->
+        <div class="modal-overlay" id="settingsModal">
+            <div class="modal">
+                <h3>Configuracion</h3>
+                <div class="form-group">
+                    <label>Proveedor</label>
+                    <select id="settingsProvider" onchange="onProviderChange()">
+                        {% for prov_id, prov in providers.items() %}
+                        <option value="{{ prov_id }}" {% if prov_id == current_provider %}selected{% endif %}>{{ prov.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="settingsApiKey" placeholder="gsk_...">
+                    <div class="hint" id="currentKeyHint">
+                        {% if has_api_key %}Key configurada{% else %}Sin API key configurada{% endif %}
+                    </div>
+                </div>
+                <div class="form-group" id="settingsPasswordGroup" style="display:none">
+                    <label>Contraseña (requerida para cambiar la API key)</label>
+                    <input type="password" id="settingsPassword" placeholder="Tu contraseña">
+                </div>
+                <div class="form-group">
+                    <label>Modelo de transcripcion</label>
+                    <select id="settingsModel"></select>
+                    <div class="hint" id="modelHint">Turbo es mas rapido. v3 es mas preciso pero mas lento.</div>
+                </div>
+                <div class="settings-msg" id="settingsMsg"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeSettings()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="saveSettings()">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        let selectedFile = null;
+        let currentJobId = null;
+        let chunkData = [];
+        let doneParts = new Set();
+        const BASE = document.baseURI.replace(/\/$/, '');
+
+        // Drop zone
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) handleFile(fileInput.files[0]);
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatSize(file.size);
+            document.getElementById('fileInfo').style.display = 'flex';
+            document.getElementById('uploadActions').style.display = 'block';
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+
+        async function uploadFile() {
+            if (!selectedFile) return;
+            const btn = document.getElementById('btnSubir');
+            btn.disabled = true;
+            btn.textContent = 'Subiendo...';
+            document.getElementById('errorMsg').style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const resp = await fetch(BASE + '/upload', { method: 'POST', body: formData });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'Error al subir archivo');
+
+                currentJobId = data.job_id;
+                document.getElementById('uploadCard').style.display = 'none';
+                document.getElementById('progressSection').style.display = 'block';
+
+                listenForChunks(currentJobId);
+            } catch (err) {
+                showError(err.message);
+                btn.disabled = false;
+                btn.textContent = 'Subir y preparar';
+            }
+        }
+
+        function listenForChunks(jobId) {
+            const source = new EventSource(BASE + '/stream/' + jobId);
+            const statusLog = document.getElementById('statusLog');
+
+            source.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+
+                if (data.type === 'progress') {
+                    document.getElementById('progressBar').style.width = data.percent + '%';
+                    document.getElementById('progressPercent').textContent = data.percent + '%';
+                    if (data.message) {
+                        const entry = document.createElement('div');
+                        entry.className = 'entry';
+                        entry.textContent = data.message;
+                        statusLog.appendChild(entry);
+                        statusLog.scrollTop = statusLog.scrollHeight;
+                    }
+                }
+
+                if (data.type === 'chunks_ready') {
+                    source.close();
+                    chunkData = data.chunks;
+                    doneParts = new Set();
+                    document.getElementById('progressSection').style.display = 'none';
+                    showChunkSelector(chunkData);
+                }
+
+                if (data.type === 'error') {
+                    source.close();
+                    showError(data.message);
+                    document.getElementById('progressSection').style.display = 'none';
+                    document.getElementById('uploadCard').style.display = 'block';
+                    const btn = document.getElementById('btnSubir');
+                    btn.disabled = false;
+                    btn.textContent = 'Subir y preparar';
+                }
+            };
+
+            source.onerror = () => source.close();
+        }
+
+        function showChunkSelector(chunks) {
+            const list = document.getElementById('chunkList');
+            list.innerHTML = '';
+
+            chunks.forEach((chunk) => {
+                const li = document.createElement('li');
+                li.className = 'chunk-item' + (doneParts.has(chunk.index) ? ' done' : '');
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = chunk.index;
+                cb.checked = !doneParts.has(chunk.index);
+                cb.disabled = doneParts.has(chunk.index);
+                cb.id = 'chunk_' + chunk.index;
+
+                const label = document.createElement('span');
+                label.className = 'chunk-label';
+                label.textContent = chunk.label;
+
+                const detail = document.createElement('span');
+                detail.className = 'chunk-detail';
+                detail.textContent = `Desde ${chunk.start} | Duracion: ${chunk.duration} | ${chunk.size}`;
+
+                li.appendChild(cb);
+                li.appendChild(label);
+                li.appendChild(detail);
+                li.addEventListener('click', (e) => {
+                    if (e.target !== cb && !cb.disabled) cb.checked = !cb.checked;
+                });
+                list.appendChild(li);
+            });
+
+            document.getElementById('chunksSection').style.display = 'block';
+        }
+
+        function selectAll() {
+            document.querySelectorAll('#chunkList input[type="checkbox"]').forEach(cb => {
+                if (!cb.disabled) cb.checked = true;
+            });
+        }
+
+        function selectNone() {
+            document.querySelectorAll('#chunkList input[type="checkbox"]').forEach(cb => {
+                if (!cb.disabled) cb.checked = false;
+            });
+        }
+
+        function getSelectedParts() {
+            const selected = [];
+            document.querySelectorAll('#chunkList input[type="checkbox"]:checked').forEach(cb => {
+                selected.push(parseInt(cb.value));
+            });
+            return selected;
+        }
+
+        let lastSelectedParts = [];
+
+        async function startTranscription() {
+            const parts = getSelectedParts();
+            if (parts.length === 0) {
+                showError('Selecciona al menos una parte');
+                return;
+            }
+
+            lastSelectedParts = parts;
+            document.getElementById('chunksSection').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('statusLog').innerHTML = '';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'none';
+            stopRateLimitCheck();
+
+            try {
+                const resp = await fetch(BASE + '/transcribe/' + currentJobId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parts: parts })
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'Error');
+
+                listenForResult(currentJobId);
+            } catch (err) {
+                showError(err.message);
+                document.getElementById('progressSection').style.display = 'none';
+                document.getElementById('chunksSection').style.display = 'block';
+            }
+        }
+
+        function listenForResult(jobId) {
+            const source = new EventSource(BASE + '/stream/' + jobId);
+            currentSource = source;
+            const statusLog = document.getElementById('statusLog');
+
+            source.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+
+                if (data.type === 'progress') {
+                    document.getElementById('progressBar').style.width = data.percent + '%';
+                    document.getElementById('progressPercent').textContent = Math.round(data.percent) + '%';
+                    if (data.message) {
+                        const isCountdown = data.message.includes('Reintentando en');
+                        const lastEntry = statusLog.lastElementChild;
+                        const lastIsCountdown = lastEntry && lastEntry.textContent.includes('Reintentando en');
+
+                        if (isCountdown && lastIsCountdown) {
+                            lastEntry.textContent = data.message;
+                        } else {
+                            const entry = document.createElement('div');
+                            entry.className = 'entry';
+                            entry.textContent = data.message;
+                            statusLog.appendChild(entry);
+                            statusLog.scrollTop = statusLog.scrollHeight;
+                        }
+                    }
+                }
+
+                if (data.type === 'result') {
+                    source.close();
+                    document.getElementById('resultText').value = data.text;
+                    document.getElementById('resultSection').style.display = 'block';
+                    document.getElementById('progressPercent').textContent = '100%';
+                    document.getElementById('progressBar').style.width = '100%';
+                    document.getElementById('btnRetry').style.display = 'none';
+                    // Mark transcribed parts as done
+                    lastSelectedParts.forEach(i => doneParts.add(i));
+                    // Show "more parts" button if there are untranscribed parts
+                    const hasMore = chunkData.some(c => !doneParts.has(c.index));
+                    document.getElementById('btnMoreParts').style.display = hasMore ? 'inline-block' : 'none';
+                }
+
+                if (data.type === 'partial_result') {
+                    source.close();
+                    if (data.text) {
+                        document.getElementById('resultText').value = data.text;
+                        document.getElementById('resultSection').style.display = 'block';
+                    }
+                    document.getElementById('btnRetry').style.display = 'inline-block';
+                    // Update done parts
+                    if (data.remaining) {
+                        // All parts except remaining are done
+                        const allIndices = chunkData.map(c => c.index);
+                        const remainingSet = new Set(data.remaining);
+                        allIndices.forEach(i => {
+                            if (!remainingSet.has(i)) doneParts.add(i);
+                        });
+                    }
+                }
+
+                if (data.type === 'error') {
+                    source.close();
+                    showError(data.message);
+                    document.getElementById('progressSection').style.display = 'none';
+                    document.getElementById('chunksSection').style.display = 'block';
+                }
+            };
+
+            source.onerror = () => source.close();
+        }
+
+        let currentSource = null;
+        let rateLimitInterval = null;
+
+        function startRateLimitCheck() {
+            stopRateLimitCheck();
+            checkRateLimit();
+            rateLimitInterval = setInterval(checkRateLimit, 5000);
+        }
+
+        function stopRateLimitCheck() {
+            if (rateLimitInterval) {
+                clearInterval(rateLimitInterval);
+                rateLimitInterval = null;
+            }
+        }
+
+        async function checkRateLimit() {
+            if (!currentJobId) return;
+            try {
+                const resp = await fetch(BASE + '/rate-limit/' + currentJobId);
+                const data = await resp.json();
+                const banner = document.getElementById('rateLimitBanner');
+                if (data.waiting && data.remaining > 0) {
+                    const mins = Math.floor(data.remaining / 60);
+                    const secs = data.remaining % 60;
+                    document.getElementById('rateLimitTime').textContent = `${mins}m ${String(secs).padStart(2,'0')}s`;
+                    banner.style.display = 'block';
+                } else {
+                    banner.style.display = 'none';
+                    stopRateLimitCheck();
+                }
+            } catch (err) {}
+        }
+
+        async function backToChunks() {
+            if (currentSource) {
+                currentSource.close();
+                currentSource = null;
+            }
+            // Cancel backend processing to save API quota
+            if (currentJobId) {
+                try {
+                    await fetch(BASE + '/cancel/' + currentJobId, { method: 'POST' });
+                } catch (err) {}
+            }
+            document.getElementById('progressSection').style.display = 'none';
+            showChunkSelector(chunkData);
+            startRateLimitCheck();
+        }
+
+        function showChunksForRetry() {
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'none';
+            showChunkSelector(chunkData);
+            startRateLimitCheck();
+        }
+
+        function showChunksForMore() {
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'none';
+            showChunkSelector(chunkData);
+            startRateLimitCheck();
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function copyResult() {
+            const text = document.getElementById('resultText').value;
+            navigator.clipboard.writeText(text).then(() => {
+                const fb = document.getElementById('copyFeedback');
+                fb.style.opacity = '1';
+                setTimeout(() => { fb.style.opacity = '0'; }, 2000);
+            });
+        }
+
+        function downloadResult() {
+            if (!currentJobId) return;
+            window.location.href = BASE + '/download/' + currentJobId;
+        }
+
+        function openHelp() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        document.getElementById('helpModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeHelp();
+        });
+
+        let settingsData = null;
+
+        async function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+            document.getElementById('settingsApiKey').value = '';
+            document.getElementById('settingsPassword').value = '';
+            document.getElementById('settingsPasswordGroup').style.display = 'none';
+            document.getElementById('settingsMsg').textContent = '';
+            try {
+                const resp = await fetch(BASE + '/settings');
+                settingsData = await resp.json();
+                document.getElementById('settingsProvider').value = settingsData.provider;
+                updateModelSelect(settingsData.models, settingsData.model);
+                if (settingsData.has_api_key) {
+                    document.getElementById('settingsApiKey').placeholder = settingsData.api_key_masked;
+                    document.getElementById('currentKeyHint').textContent = 'Key actual: ' + settingsData.api_key_masked;
+                } else {
+                    document.getElementById('settingsApiKey').placeholder = 'Pega tu API key...';
+                    document.getElementById('currentKeyHint').textContent = 'Sin API key configurada';
+                }
+            } catch (err) {}
+        }
+
+        function updateModelSelect(models, currentModel) {
+            const select = document.getElementById('settingsModel');
+            select.innerHTML = '';
+            for (const [id, name] of Object.entries(models)) {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = name;
+                if (id === currentModel) opt.selected = true;
+                select.appendChild(opt);
+            }
+        }
+
+        async function onProviderChange() {
+            const provider = document.getElementById('settingsProvider').value;
+            // Save provider first to get updated models
+            try {
+                const resp = await fetch(BASE + '/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: provider })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    updateModelSelect(data.models, data.model);
+                    // Refresh key info
+                    const resp2 = await fetch(BASE + '/settings');
+                    const data2 = await resp2.json();
+                    if (data2.has_api_key) {
+                        document.getElementById('settingsApiKey').placeholder = data2.api_key_masked;
+                        document.getElementById('currentKeyHint').textContent = 'Key actual: ' + data2.api_key_masked;
+                    } else {
+                        document.getElementById('settingsApiKey').placeholder = 'Pega tu API key...';
+                        document.getElementById('currentKeyHint').textContent = 'Sin API key para este proveedor';
+                    }
+                }
+            } catch (err) {}
+            document.getElementById('settingsApiKey').value = '';
+            document.getElementById('settingsPasswordGroup').style.display = 'none';
+        }
+
+        // Show password field only when typing a new API key
+        document.getElementById('settingsApiKey').addEventListener('input', (e) => {
+            document.getElementById('settingsPasswordGroup').style.display =
+                e.target.value.trim() ? 'block' : 'none';
+        });
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        async function saveSettings() {
+            const apiKey = document.getElementById('settingsApiKey').value.trim();
+            const password = document.getElementById('settingsPassword').value;
+            const provider = document.getElementById('settingsProvider').value;
+            const model = document.getElementById('settingsModel').value;
+            const msg = document.getElementById('settingsMsg');
+
+            const body = { provider: provider, model: model };
+            if (apiKey) {
+                body.api_key = apiKey;
+                body.password = password;
+            }
+
+            try {
+                const resp = await fetch(BASE + '/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error);
+                msg.textContent = data.message;
+                msg.className = 'settings-msg ok';
+                setTimeout(() => closeSettings(), 1500);
+            } catch (err) {
+                msg.textContent = err.message;
+                msg.className = 'settings-msg err';
+            }
+        }
+
+        // Close modal on overlay click
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeSettings();
+        });
+
+        async function cleanupFiles() {
+            if (!confirm('Borrar todos los archivos temporales? Si tenes una transcripcion parcial pendiente se va a perder.')) return;
+            try {
+                const resp = await fetch(BASE + '/cleanup', { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'Error');
+                alert(data.message);
+                resetApp();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function resetApp() {
+            selectedFile = null;
+            currentJobId = null;
+            chunkData = [];
+            doneParts = new Set();
+            fileInput.value = '';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('uploadActions').style.display = 'none';
+            document.getElementById('chunksSection').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('uploadCard').style.display = 'block';
+            document.getElementById('statusLog').innerHTML = '';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('resultText').value = '';
+            const btn = document.getElementById('btnSubir');
+            btn.disabled = false;
+            btn.textContent = 'Subir y preparar';
+        }
+        </script>
+        {% endif %}
+    </div>
+
+    <div class="footer">
+        Desarrollado por <a href="https://nicomaure.com.ar" target="_blank" rel="noopener">nicomaure</a>
+    </div>
+</body>
+</html>
