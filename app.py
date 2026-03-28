@@ -14,12 +14,14 @@ from flask import (
     render_template, Response, jsonify, send_file
 )
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 from groq import Groq
 from openai import OpenAI
 
 load_dotenv()
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32).hex())
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024 * 1024  # 1GB
 # Werkzeug: guardar a disco archivos > 1MB (no en RAM)
