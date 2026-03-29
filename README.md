@@ -4,16 +4,25 @@ Transcribi clases o audios a texto usando la API gratuita de Groq (Whisper) o la
 
 Subi un video o audio desde el navegador, o pega un link de YouTube o Google Drive. La app lo convierte, divide y transcribe automaticamente. El resultado se puede copiar o descargar como `.txt`.
 
-## Descargar (Linux)
+## Descargar
 
-**No necesitas instalar nada.** Descarga el archivo, dale permisos y ejecutalo:
+**No necesitas instalar nada.** Descarga, ejecuta y listo.
 
-1. [**Descargar TranscriVoz AppImage**](https://github.com/nicomaure/TranscriVoz/releases/latest/download/TranscriVoz-x86_64.AppImage)
+### Windows
+
+1. [**Descargar TranscriVoz para Windows**](https://github.com/nicomaure/TranscriVoz/releases/download/v1.0.0-windows/TranscriVoz-Windows-x86_64.zip)
+2. Extraer el zip en cualquier carpeta
+3. Ejecutar `TranscriVoz.exe`
+4. Se abre en tu navegador. Ir a Ajustes y pegar tu API key de [Groq](https://console.groq.com/keys) (gratis) o [OpenAI](https://platform.openai.com/api-keys)
+
+### Linux
+
+1. [**Descargar TranscriVoz AppImage**](https://github.com/nicomaure/TranscriVoz/releases/download/v1.0.0-desktop/TranscriVoz-x86_64.AppImage)
 2. Darle permisos: `chmod +x TranscriVoz-x86_64.AppImage`
 3. Ejecutar (doble click o desde terminal: `./TranscriVoz-x86_64.AppImage`)
 4. Se abre en tu navegador. Ir a Ajustes y pegar tu API key de [Groq](https://console.groq.com/keys) (gratis) o [OpenAI](https://platform.openai.com/api-keys)
 
-> Todo viene incluido: Python, ffmpeg y yt-dlp. Funciona en cualquier distro Linux x86_64.
+> Todo viene incluido: Python, ffmpeg y yt-dlp. No necesita instalar dependencias.
 
 ---
 
