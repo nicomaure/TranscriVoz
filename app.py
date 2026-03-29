@@ -20,8 +20,11 @@ from openai import OpenAI
 
 load_dotenv()
 
+DESKTOP_MODE = os.environ.get("TRANSCRIVOZ_DESKTOP") == "1"
+
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
+if not DESKTOP_MODE:
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32).hex())
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024 * 1024  # 1GB
 # Werkzeug: guardar a disco archivos > 1MB (no en RAM)
@@ -131,9 +134,9 @@ def reset_login_attempts(ip):
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get("authenticated"):
-            return jsonify({"error": "No autorizado"}), 401
-        return f(*args, **kwargs)
+        if DESKTOP_MODE or session.get("authenticated"):
+            return f(*args, **kwargs)
+        return jsonify({"error": "No autorizado"}), 401
     return decorated
 
 
@@ -436,7 +439,7 @@ def transcribe_selected(job_id, selected_indices):
 
 @app.route("/")
 def index():
-    authenticated = session.get("authenticated", False)
+    authenticated = DESKTOP_MODE or session.get("authenticated", False)
     current_provider = config["provider"]
     has_api_key = bool(config["api_keys"].get(current_provider, ""))
     return render_template("index.html",

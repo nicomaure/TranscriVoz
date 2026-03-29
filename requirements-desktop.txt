@@ -1,0 +1,6 @@
+flask
+groq
+openai
+python-dotenv
+yt-dlp
+gdown
