@@ -598,6 +598,116 @@ def upload():
     return jsonify({"job_id": job_id})
 
 
+def download_from_url(url, job_dir, job_id):
+    """Download audio/video from YouTube or Google Drive URL."""
+    import yt_dlp
+    import gdown
+
+    emit(job_id, "progress", "Detectando tipo de link...", 2)
+
+    # YouTube
+    if "youtube.com" in url or "youtu.be" in url:
+        emit(job_id, "progress", "Descargando audio de YouTube...", 3)
+        output_path = os.path.join(job_dir, "original.mp3")
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "outtmpl": os.path.join(job_dir, "original.%(ext)s"),
+            "postprocessors": [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "32",
+            }],
+            "quiet": True,
+            "no_warnings": True,
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                title = info.get("title", "youtube_audio")
+        except Exception as e:
+            raise RuntimeError(f"Error al descargar de YouTube: {str(e)[:200]}")
+
+        if not os.path.exists(output_path):
+            # yt-dlp may have saved with different extension
+            for f in os.listdir(job_dir):
+                if f.startswith("original."):
+                    output_path = os.path.join(job_dir, f)
+                    break
+
+        return output_path, f"{title}.mp3"
+
+    # Google Drive
+    if "drive.google.com" in url:
+        emit(job_id, "progress", "Descargando de Google Drive...", 3)
+        try:
+            # Let gdown use the original filename from Drive
+            result_path = gdown.download(url, output=job_dir + "/", quiet=True, fuzzy=True)
+            if not result_path or not os.path.exists(result_path):
+                raise RuntimeError("No se pudo descargar el archivo de Drive. Verifica que el link sea publico.")
+            filename = os.path.basename(result_path)
+            ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+            if ext not in ALLOWED_EXTENSIONS:
+                raise RuntimeError(f"El archivo descargado (.{ext}) no es un formato de audio/video soportado")
+            final_path = os.path.join(job_dir, f"original.{ext}")
+            os.rename(result_path, final_path)
+            return final_path, filename
+        except RuntimeError:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Error al descargar de Drive: {str(e)[:200]}")
+
+    raise RuntimeError("Link no soportado. Usa links de YouTube o Google Drive.")
+
+
+def prepare_job_from_url(job_id, url):
+    """Download from URL then prepare (convert + split)."""
+    job = jobs[job_id]
+    job_dir = job["job_dir"]
+
+    try:
+        file_path, filename = download_from_url(url, job_dir, job_id)
+        job["original_path"] = file_path
+        job["filename"] = filename
+        emit(job_id, "progress", f"Descargado: {filename}", 5)
+        prepare_job(job_id)
+    except Exception as e:
+        emit(job_id, "error", message=str(e))
+
+
+@app.route("/upload-url", methods=["POST"])
+@require_auth
+def upload_url():
+    data = request.get_json()
+    url = data.get("url", "").strip()
+
+    if not url:
+        return jsonify({"error": "No se envio URL"}), 400
+
+    if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url:
+        return jsonify({"error": "Solo se aceptan links de YouTube o Google Drive"}), 400
+
+    job_id = uuid.uuid4().hex[:12]
+    job_dir = f"/tmp/transcriptor-{job_id}"
+    os.makedirs(job_dir, exist_ok=True)
+
+    jobs[job_id] = {
+        "messages": [],
+        "result": None,
+        "original_path": "",
+        "job_dir": job_dir,
+        "filename": "descarga",
+        "prepared": False,
+        "failed": False,
+        "transcribed_parts": {},
+    }
+
+    import threading
+    t = threading.Thread(target=prepare_job_from_url, args=(job_id, url), daemon=True)
+    t.start()
+
+    return jsonify({"job_id": job_id})
+
+
 @app.route("/transcribe/<job_id>", methods=["POST"])
 @require_auth
 def transcribe(job_id):

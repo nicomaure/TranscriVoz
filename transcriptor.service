@@ -10,7 +10,7 @@ After=network.target
 User=tu-usuario
 Group=tu-usuario
 WorkingDirectory=/ruta/a/transcriptor-groq
-Environment="PATH=/ruta/a/transcriptor-groq/venv/bin"
+Environment="PATH=/ruta/a/transcriptor-groq/venv/bin:/usr/bin:/usr/local/bin"
 ExecStart=/ruta/a/transcriptor-groq/venv/bin/gunicorn \
     --worker-class gevent \
     --workers 1 \

@@ -126,6 +126,69 @@
             margin-bottom: 1.2rem;
         }
 
+        /* Upload tabs */
+        .upload-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1rem;
+        }
+
+        .upload-tab {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            background: var(--bg);
+            border: 1px solid #ffffff15;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .upload-tab:first-child { border-radius: 8px 0 0 8px; }
+        .upload-tab:last-child { border-radius: 0 8px 8px 0; }
+
+        .upload-tab.active {
+            background: var(--surface-2);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .upload-tab:hover:not(.active) {
+            background: var(--surface-2);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* URL input */
+        .url-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .url-input-group input {
+            flex: 1;
+            padding: 0.7rem 1rem;
+            background: var(--bg);
+            border: 1px solid #ffffff20;
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .url-input-group input:focus { border-color: var(--accent); }
+
+        .url-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
         /* Upload zone */
         .drop-zone {
             border: 2px dashed #ffffff25;
@@ -574,24 +637,43 @@
             <div class="upload-description">
                 Transcribi tus clases o audios facilmente con la API de Groq
             </div>
-            <div class="drop-zone" id="dropZone">
-                <span class="drop-zone-icon">&#127908;</span>
-                <div class="drop-zone-text">
-                    Arrastra tu archivo aqui o <strong>hace click para seleccionar</strong>
-                </div>
-                <div class="drop-zone-formats">
-                    MP4, MP3, M4A, WAV, OGG, WEBM, FLAC, AAC, WMA — max 1 GB
-                </div>
-                <input type="file" id="fileInput" accept=".mp3,.mp4,.m4a,.wav,.ogg,.webm,.flac,.aac,.wma" hidden>
+            <div class="upload-tabs">
+                <div class="upload-tab active" onclick="switchTab('file')">Archivo</div>
+                <div class="upload-tab" onclick="switchTab('url')">Link</div>
             </div>
-            <div class="file-info" id="fileInfo">
-                <span class="name" id="fileName"></span>
-                <span class="size" id="fileSize"></span>
+            <!-- Tab: Archivo -->
+            <div class="tab-content active" id="tabFile">
+                <div class="drop-zone" id="dropZone">
+                    <span class="drop-zone-icon">&#127908;</span>
+                    <div class="drop-zone-text">
+                        Arrastra tu archivo aqui o <strong>hace click para seleccionar</strong>
+                    </div>
+                    <div class="drop-zone-formats">
+                        MP4, MP3, M4A, WAV, OGG, WEBM, FLAC, AAC, WMA — max 1 GB
+                    </div>
+                    <input type="file" id="fileInput" accept=".mp3,.mp4,.m4a,.wav,.ogg,.webm,.flac,.aac,.wma" hidden>
+                </div>
+                <div class="file-info" id="fileInfo">
+                    <span class="name" id="fileName"></span>
+                    <span class="size" id="fileSize"></span>
+                </div>
+                <div class="upload-actions" id="uploadActions">
+                    <button class="btn btn-accent" id="btnSubir" onclick="uploadFile()">
+                        Subir y preparar
+                    </button>
+                </div>
             </div>
-            <div class="upload-actions" id="uploadActions">
-                <button class="btn btn-accent" id="btnSubir" onclick="uploadFile()">
-                    Subir y preparar
-                </button>
+            <!-- Tab: Link -->
+            <div class="tab-content" id="tabUrl">
+                <div class="url-input-group">
+                    <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=... o link de Drive">
+                </div>
+                <div class="url-hint">YouTube o Google Drive (link publico)</div>
+                <div class="upload-actions" id="urlActions" style="display:none">
+                    <button class="btn btn-accent" id="btnDescargar" onclick="uploadUrl()">
+                        Descargar y preparar
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -650,8 +732,8 @@
                     <div class="help-item">
                         <div class="help-step">1</div>
                         <div>
-                            <strong>Subi tu archivo</strong>
-                            <p>Arrastra o selecciona un video o audio de clase. Se acepta MP4, MP3, WAV, M4A, OGG, WEBM, FLAC, AAC y WMA de hasta 1 GB.</p>
+                            <strong>Subi tu archivo o pega un link</strong>
+                            <p>Arrastra o selecciona un video o audio de clase (MP4, MP3, WAV, M4A, OGG, WEBM, FLAC, AAC, WMA, hasta 1 GB). Tambien podes pegar un link de YouTube o Google Drive (publico).</p>
                         </div>
                     </div>
                     <div class="help-item">
@@ -659,6 +741,14 @@
                         <div>
                             <strong>Selecciona las partes</strong>
                             <p>El audio se divide automaticamente en partes de ~19 MB. Podes elegir cuales transcribir. Esto es util para dividir el trabajo entre varias cuentas de Groq o para hacerlo en etapas.</p>
+                        </div>
+                    </div>
+                    <div class="help-divider"></div>
+                    <div class="help-item">
+                        <div class="help-step">&#128279;</div>
+                        <div>
+                            <strong>Links de YouTube y Google Drive</strong>
+                            <p>Desde la pestaña "Link" podes pegar una URL de YouTube o un link publico de Google Drive. La app descarga el audio automaticamente y sigue el mismo proceso.</p>
                         </div>
                     </div>
                     <div class="help-item">
@@ -740,6 +830,54 @@
         let doneParts = new Set();
         const BASE = document.baseURI.replace(/\/$/, '');
 
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.upload-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            if (tab === 'file') {
+                document.querySelector('.upload-tab:first-child').classList.add('active');
+                document.getElementById('tabFile').classList.add('active');
+            } else {
+                document.querySelector('.upload-tab:last-child').classList.add('active');
+                document.getElementById('tabUrl').classList.add('active');
+            }
+        }
+
+        // URL input - show button when typing
+        document.getElementById('urlInput').addEventListener('input', (e) => {
+            document.getElementById('urlActions').style.display =
+                e.target.value.trim() ? 'block' : 'none';
+        });
+
+        async function uploadUrl() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) return;
+            const btn = document.getElementById('btnDescargar');
+            btn.disabled = true;
+            btn.textContent = 'Descargando...';
+            document.getElementById('errorMsg').style.display = 'none';
+
+            try {
+                const resp = await fetch(BASE + '/upload-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'Error al procesar URL');
+
+                currentJobId = data.job_id;
+                document.getElementById('uploadCard').style.display = 'none';
+                document.getElementById('progressSection').style.display = 'block';
+
+                listenForChunks(currentJobId);
+            } catch (err) {
+                showError(err.message);
+                btn.disabled = false;
+                btn.textContent = 'Descargar y preparar';
+            }
+        }
+
         // Drop zone
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -774,31 +912,50 @@
             return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
         }
 
-        async function uploadFile() {
+        function uploadFile() {
             if (!selectedFile) return;
             const btn = document.getElementById('btnSubir');
             btn.disabled = true;
-            btn.textContent = 'Subiendo...';
+            btn.textContent = 'Subiendo... 0%';
             document.getElementById('errorMsg').style.display = 'none';
 
             const formData = new FormData();
             formData.append('file', selectedFile);
 
-            try {
-                const resp = await fetch(BASE + '/upload', { method: 'POST', body: formData });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.error || 'Error al subir archivo');
+            const xhr = new XMLHttpRequest();
 
-                currentJobId = data.job_id;
-                document.getElementById('uploadCard').style.display = 'none';
-                document.getElementById('progressSection').style.display = 'block';
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    btn.textContent = `Subiendo... ${pct}%`;
+                }
+            });
 
-                listenForChunks(currentJobId);
-            } catch (err) {
-                showError(err.message);
+            xhr.addEventListener('load', () => {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (xhr.status !== 200) throw new Error(data.error || 'Error al subir archivo');
+
+                    currentJobId = data.job_id;
+                    document.getElementById('uploadCard').style.display = 'none';
+                    document.getElementById('progressSection').style.display = 'block';
+
+                    listenForChunks(currentJobId);
+                } catch (err) {
+                    showError(err.message);
+                    btn.disabled = false;
+                    btn.textContent = 'Subir y preparar';
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                showError('Error de conexion al subir archivo');
                 btn.disabled = false;
                 btn.textContent = 'Subir y preparar';
-            }
+            });
+
+            xhr.open('POST', BASE + '/upload');
+            xhr.send(formData);
         }
 
         function listenForChunks(jobId) {
@@ -1238,9 +1395,15 @@
             document.getElementById('progressBar').style.width = '0%';
             document.getElementById('progressPercent').textContent = '0%';
             document.getElementById('resultText').value = '';
+            document.getElementById('urlInput').value = '';
+            document.getElementById('urlActions').style.display = 'none';
             const btn = document.getElementById('btnSubir');
             btn.disabled = false;
             btn.textContent = 'Subir y preparar';
+            const btnUrl = document.getElementById('btnDescargar');
+            btnUrl.disabled = false;
+            btnUrl.textContent = 'Descargar y preparar';
+            switchTab('file');
         }
         </script>
         {% endif %}

@@ -2,7 +2,7 @@
 
 Transcribi clases o audios a texto usando la API gratuita de Groq (Whisper) o la API de OpenAI.
 
-Subi un video o audio desde el navegador, la app lo convierte, divide y transcribe automaticamente. El resultado se puede copiar o descargar como `.txt`.
+Subi un video o audio desde el navegador, o pega un link de YouTube o Google Drive. La app lo convierte, divide y transcribe automaticamente. El resultado se puede copiar o descargar como `.txt`.
 
 ## Requisitos
 
@@ -57,7 +57,7 @@ python3 app.py
 ## Uso
 
 1. Ingresa la contraseña
-2. Subi un archivo de audio o video (MP4, MP3, WAV, M4A, OGG, WEBM, FLAC, AAC, WMA - max 1 GB)
+2. Subi un archivo de audio o video (MP4, MP3, WAV, M4A, OGG, WEBM, FLAC, AAC, WMA - max 1 GB) o pega un link de YouTube / Google Drive
 3. La app convierte y divide el audio automaticamente
 4. Selecciona que partes queres transcribir
 5. Espera el resultado - si llegas al limite de la API, la app espera y reintenta sola
@@ -69,6 +69,8 @@ python3 app.py
 - **Countdown en tiempo real**: Ve cuanto falta para que la API se desbloquee.
 - **Resultado parcial**: Si falla una parte, se guarda lo que ya se transcribio.
 - **Reintentar desde donde quedo**: No gasta cupo en partes ya hechas.
+- **Descarga desde YouTube y Google Drive**: Pega un link y la app descarga el audio automaticamente.
+- **Progreso de subida**: Barra de porcentaje en tiempo real al subir archivos.
 - **Multiples proveedores**: Groq (gratis) y OpenAI (pago), seleccionables desde la interfaz.
 - **Cambiar API key y modelo desde la UI**: Sin tocar archivos de configuracion.
 - **Proteccion con contraseña**: Acceso protegido con hash PBKDF2.
@@ -157,6 +159,7 @@ TranscriVoz/
 - **Backend**: Flask + Gunicorn + gevent
 - **Transcripcion**: Groq (Whisper Large v3 / Turbo) y OpenAI (Whisper)
 - **Procesamiento**: ffmpeg
+- **Descarga de links**: yt-dlp (YouTube) + gdown (Google Drive)
 - **Frontend**: HTML/CSS/JS (sin frameworks)
 
 ---
