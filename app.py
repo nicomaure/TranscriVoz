@@ -6,6 +6,7 @@ import hashlib
 import subprocess
 import json
 import atexit
+import tempfile
 from pathlib import Path
 from functools import wraps
 
@@ -33,6 +34,7 @@ app.config["MAX_FORM_MEMORY_SIZE"] = 1 * 1024 * 1024
 
 PASSWORD_HASH = os.environ.get("PASSWORD_HASH", "")
 MAX_CHUNK_SIZE = 19 * 1024 * 1024  # 19MB
+TEMP_DIR = tempfile.gettempdir()  # cross-platform: /tmp on Linux, %TEMP% on Windows
 
 PROVIDERS = {
     "groq": {
@@ -448,7 +450,8 @@ def index():
                            has_api_key=has_api_key,
                            current_provider=current_provider,
                            current_model=config["model"],
-                           providers=PROVIDERS)
+                           providers=PROVIDERS,
+                           desktop_mode=DESKTOP_MODE)
 
 
 @app.route("/login", methods=["POST"])
@@ -516,11 +519,12 @@ def update_settings():
 
     provider = config["provider"]
 
-    # Require password to change API key
+    # Require password to change API key (skip in desktop mode)
     if "api_key" in data and data["api_key"].strip():
-        password = data.get("password", "")
-        if not check_password(password):
-            return jsonify({"error": "Contraseña incorrecta para cambiar la API key"}), 403
+        if not DESKTOP_MODE:
+            password = data.get("password", "")
+            if not check_password(password):
+                return jsonify({"error": "Contraseña incorrecta para cambiar la API key"}), 403
         new_key = data["api_key"].strip()
         expected_prefix = PROVIDERS[provider]["key_prefix"]
         if not new_key.startswith(expected_prefix):
@@ -577,7 +581,7 @@ def upload():
         return jsonify({"error": f"Formato .{ext} no soportado"}), 400
 
     job_id = uuid.uuid4().hex[:12]
-    job_dir = f"/tmp/transcriptor-{job_id}"
+    job_dir = os.path.join(TEMP_DIR, f"transcriptor-{job_id}")
     os.makedirs(job_dir, exist_ok=True)
 
     original_path = os.path.join(job_dir, f"original.{ext}")
@@ -705,7 +709,7 @@ def upload_url():
         return jsonify({"error": "Solo se aceptan links de YouTube o Google Drive"}), 400
 
     job_id = uuid.uuid4().hex[:12]
-    job_dir = f"/tmp/transcriptor-{job_id}"
+    job_dir = os.path.join(TEMP_DIR, f"transcriptor-{job_id}")
     os.makedirs(job_dir, exist_ok=True)
 
     jobs[job_id] = {
@@ -813,13 +817,33 @@ def download(job_id):
     )
 
 
+@app.route("/download-audio/<job_id>")
+@require_auth
+def download_audio(job_id):
+    if job_id not in jobs:
+        return jsonify({"error": "Job no encontrado"}), 404
+
+    job = jobs[job_id]
+    job_dir = job.get("job_dir", "")
+    mp3_path = os.path.join(job_dir, "audio.mp3")
+
+    if not os.path.exists(mp3_path):
+        return jsonify({"error": "Audio no disponible"}), 404
+
+    filename = job.get("filename", "audio")
+    base_name = filename.rsplit(".", 1)[0] if "." in filename else filename
+    download_name = f"{base_name}.mp3"
+
+    return send_file(mp3_path, as_attachment=True, download_name=download_name)
+
+
 @app.route("/cleanup", methods=["POST"])
 @require_auth
 def cleanup():
     import glob
     count = 0
     total_size = 0
-    for d in glob.glob("/tmp/transcriptor-*"):
+    for d in glob.glob(os.path.join(TEMP_DIR, "transcriptor-*")):
         try:
             for root, dirs, files in os.walk(d):
                 for f in files:
@@ -836,7 +860,7 @@ def cleanup():
 def cleanup_old_jobs():
     """Remove temp directories for any leftover jobs"""
     import glob
-    for d in glob.glob("/tmp/transcriptor-*"):
+    for d in glob.glob(os.path.join(TEMP_DIR, "transcriptor-*")):
         try:
             shutil.rmtree(d, ignore_errors=True)
         except Exception:

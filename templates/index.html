@@ -714,6 +714,7 @@
                 <span class="copy-feedback" id="copyFeedback">Copiado!</span>
                 <button class="btn btn-secondary" onclick="copyResult()">Copiar</button>
                 <button class="btn btn-primary" onclick="downloadResult()">Descargar .txt</button>
+                <button class="btn btn-secondary" onclick="downloadAudio()">Descargar audio</button>
                 <button class="btn btn-accent" id="btnRetry" onclick="showChunksForRetry()" style="display:none">
                     Reintentar partes faltantes
                 </button>
@@ -812,10 +813,12 @@
                         <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color: var(--accent);">OpenAI</a>
                     </div>
                 </div>
+                {% if not desktop_mode %}
                 <div class="form-group" id="settingsPasswordGroup" style="display:none">
                     <label>Contraseña (requerida para cambiar la API key)</label>
                     <input type="password" id="settingsPassword" placeholder="Tu contraseña">
                 </div>
+                {% endif %}
                 <div class="form-group">
                     <label>Modelo de transcripcion</label>
                     <select id="settingsModel"></select>
@@ -1266,6 +1269,11 @@
             window.location.href = BASE + '/download/' + currentJobId;
         }
 
+        function downloadAudio() {
+            if (!currentJobId) return;
+            window.location.href = BASE + '/download-audio/' + currentJobId;
+        }
+
         function openHelp() {
             document.getElementById('helpModal').classList.add('active');
         }
@@ -1283,8 +1291,10 @@
         async function openSettings() {
             document.getElementById('settingsModal').classList.add('active');
             document.getElementById('settingsApiKey').value = '';
-            document.getElementById('settingsPassword').value = '';
-            document.getElementById('settingsPasswordGroup').style.display = 'none';
+            const pwEl = document.getElementById('settingsPassword');
+            if (pwEl) pwEl.value = '';
+            const pwGroup = document.getElementById('settingsPasswordGroup');
+            if (pwGroup) pwGroup.style.display = 'none';
             document.getElementById('settingsMsg').textContent = '';
             try {
                 const resp = await fetch(BASE + '/settings');
@@ -1338,13 +1348,14 @@
                 }
             } catch (err) {}
             document.getElementById('settingsApiKey').value = '';
-            document.getElementById('settingsPasswordGroup').style.display = 'none';
+            const pwGroup2 = document.getElementById('settingsPasswordGroup');
+            if (pwGroup2) pwGroup2.style.display = 'none';
         }
 
         // Show password field only when typing a new API key
         document.getElementById('settingsApiKey').addEventListener('input', (e) => {
-            document.getElementById('settingsPasswordGroup').style.display =
-                e.target.value.trim() ? 'block' : 'none';
+            const pwGroup3 = document.getElementById('settingsPasswordGroup');
+            if (pwGroup3) pwGroup3.style.display = e.target.value.trim() ? 'block' : 'none';
         });
 
         function closeSettings() {
@@ -1353,7 +1364,8 @@
 
         async function saveSettings() {
             const apiKey = document.getElementById('settingsApiKey').value.trim();
-            const password = document.getElementById('settingsPassword').value;
+            const pwField = document.getElementById('settingsPassword');
+            const password = pwField ? pwField.value : '';
             const provider = document.getElementById('settingsProvider').value;
             const model = document.getElementById('settingsModel').value;
             const msg = document.getElementById('settingsMsg');
