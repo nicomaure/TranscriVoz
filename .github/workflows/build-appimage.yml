@@ -1,0 +1,145 @@
+name: Build AppImage
+
+on:
+  push:
+    branches: [desktop]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download portable Python
+        run: |
+          curl -L -o python.AppImage \
+            https://github.com/niess/python-appimage/releases/download/python3.12/python3.12.12-cp312-cp312-manylinux2014_x86_64.AppImage
+          chmod +x python.AppImage
+
+      - name: Extract Python and set up AppDir
+        run: |
+          ./python.AppImage --appimage-extract
+          mv squashfs-root TranscriVoz.AppDir
+
+          # Clean Python AppImage artifacts
+          rm -f TranscriVoz.AppDir/AppRun
+          rm -f TranscriVoz.AppDir/python3.12.12.desktop
+          rm -f TranscriVoz.AppDir/python3.12.12.svg TranscriVoz.AppDir/python3.12.12.png
+          rm -f TranscriVoz.AppDir/python.png
+          rm -f TranscriVoz.AppDir/usr/share/metainfo/python3.12.12.appdata.xml
+          rm -f TranscriVoz.AppDir/usr/bin/python TranscriVoz.AppDir/usr/bin/python3 TranscriVoz.AppDir/usr/bin/python3.12
+          rm -f TranscriVoz.AppDir/.DirIcon
+
+      - name: Install Python packages
+        run: |
+          TranscriVoz.AppDir/opt/python3.12/bin/python3.12 -m pip install --no-warn-script-location \
+            --upgrade pip
+          TranscriVoz.AppDir/opt/python3.12/bin/python3.12 -m pip install --no-warn-script-location \
+            flask groq openai python-dotenv yt-dlp gdown
+
+      - name: Copy app files
+        run: |
+          mkdir -p TranscriVoz.AppDir/opt/transcrivoz
+          cp app.py TranscriVoz.AppDir/opt/transcrivoz/
+          cp main.py TranscriVoz.AppDir/opt/transcrivoz/
+          cp -r templates TranscriVoz.AppDir/opt/transcrivoz/
+
+      - name: Download static ffmpeg
+        run: |
+          curl -L -o ffmpeg.tar.xz \
+            https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+          tar xf ffmpeg.tar.xz
+          FFMPEG_DIR=$(ls -d ffmpeg-*-amd64-static | head -1)
+          cp "${FFMPEG_DIR}/ffmpeg" TranscriVoz.AppDir/usr/bin/
+          cp "${FFMPEG_DIR}/ffprobe" TranscriVoz.AppDir/usr/bin/
+
+      - name: Create AppRun and metadata
+        run: |
+          cat > TranscriVoz.AppDir/AppRun << 'APPRUN'
+          #!/bin/bash
+          SELF="$(readlink -f "$0")"
+          APPDIR="${SELF%/*}"
+
+          export PATH="${APPDIR}/usr/bin:${PATH}"
+          export LD_LIBRARY_PATH="${APPDIR}/opt/python3.12/lib:${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
+          export PYTHONHOME="${APPDIR}/opt/python3.12"
+          export PYTHONDONTWRITEBYTECODE=1
+          export SSL_CERT_FILE="${APPDIR}/opt/_internal/certs.pem"
+          export TRANSCRIVOZ_DESKTOP=1
+
+          exec "${APPDIR}/opt/python3.12/bin/python3.12" "${APPDIR}/opt/transcrivoz/main.py" "$@"
+          APPRUN
+          chmod +x TranscriVoz.AppDir/AppRun
+
+          cat > TranscriVoz.AppDir/transcrivoz.desktop << 'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=TranscriVoz
+          Comment=Transcriptor de audio/video usando IA
+          Exec=TranscriVoz
+          Icon=transcrivoz
+          Categories=AudioVideo;Audio;Utility;
+          Terminal=false
+          DESKTOP
+
+          cat > TranscriVoz.AppDir/transcrivoz.svg << 'SVG'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+            <rect width="128" height="128" rx="20" fill="#1a1a2e"/>
+            <circle cx="64" cy="52" r="22" fill="none" stroke="#50e6ff" stroke-width="4"/>
+            <rect x="58" y="34" width="12" height="36" rx="6" fill="#0078d4"/>
+            <line x1="64" y1="78" x2="64" y2="96" stroke="#50e6ff" stroke-width="4" stroke-linecap="round"/>
+            <line x1="48" y1="96" x2="80" y2="96" stroke="#50e6ff" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+          SVG
+
+          ln -sf transcrivoz.svg TranscriVoz.AppDir/.DirIcon
+
+      - name: Build AppImage
+        run: |
+          curl -L -o appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool TranscriVoz.AppDir TranscriVoz-x86_64.AppImage
+
+      - name: Update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete old AppImage from release if exists
+          gh release delete-asset v1.0.0-desktop TranscriVoz-x86_64.AppImage --yes 2>/dev/null || true
+          # Also clean old naming format
+          gh release delete-asset v1.0.0-desktop TranscriVoz-1.0.0-x86_64.AppImage --yes 2>/dev/null || true
+
+          # Upload new AppImage
+          gh release upload v1.0.0-desktop TranscriVoz-x86_64.AppImage --clobber
+
+          # Update release notes with build date
+          gh release edit v1.0.0-desktop --notes "$(cat <<EOF
+          ## TranscriVoz Desktop - AppImage
+
+          Versión de escritorio de TranscriVoz. Todo incluido en un solo archivo, no necesita instalar nada.
+
+          **Última build:** $(date -u '+%Y-%m-%d %H:%M UTC')
+
+          ### Cómo usar
+
+          1. Descargar \`TranscriVoz-x86_64.AppImage\`
+          2. Darle permisos de ejecución: \`chmod +x TranscriVoz-x86_64.AppImage\`
+          3. Ejecutarlo (doble click o desde terminal)
+          4. Se abre automáticamente en tu navegador
+          5. Configurar tu API key de Groq (gratis) u OpenAI en Ajustes
+
+          ### Incluye
+          - Python 3.12 portable
+          - ffmpeg y ffprobe
+          - yt-dlp (descarga desde YouTube)
+          - Todas las dependencias de Python
+
+          ### Requisitos
+          - Linux x86_64 (cualquier distro)
+          - Navegador web (Firefox, Chrome, etc.)
+          - API key de [Groq](https://console.groq.com/) (gratis) o [OpenAI](https://platform.openai.com/)
+          EOF
+          )"
