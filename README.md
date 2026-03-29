@@ -4,13 +4,30 @@ Transcribi clases o audios a texto usando la API gratuita de Groq (Whisper) o la
 
 Subi un video o audio desde el navegador, o pega un link de YouTube o Google Drive. La app lo convierte, divide y transcribe automaticamente. El resultado se puede copiar o descargar como `.txt`.
 
-## Requisitos
+## Descargar (Linux)
+
+**No necesitas instalar nada.** Descarga el archivo, dale permisos y ejecutalo:
+
+1. [**Descargar TranscriVoz AppImage**](https://github.com/nicomaure/TranscriVoz/releases/latest/download/TranscriVoz-x86_64.AppImage)
+2. Darle permisos: `chmod +x TranscriVoz-x86_64.AppImage`
+3. Ejecutar (doble click o desde terminal: `./TranscriVoz-x86_64.AppImage`)
+4. Se abre en tu navegador. Ir a Ajustes y pegar tu API key de [Groq](https://console.groq.com/keys) (gratis) o [OpenAI](https://platform.openai.com/api-keys)
+
+> Todo viene incluido: Python, ffmpeg y yt-dlp. Funciona en cualquier distro Linux x86_64.
+
+---
+
+## Instalacion desde el codigo (alternativa)
+
+Si preferis instalar desde el codigo fuente en vez del AppImage:
+
+### Requisitos
 
 - Python 3.8+
 - ffmpeg
 - Una API key de [Groq](https://console.groq.com) (gratis) o de [OpenAI](https://platform.openai.com) (pago)
 
-## Instalacion rapida
+### Instalacion rapida
 
 ```bash
 git clone https://github.com/nicomaure/TranscriVoz.git
@@ -28,7 +45,7 @@ python3 app.py
 # Abrir http://localhost:5050
 ```
 
-## Instalacion manual
+### Instalacion manual
 
 ```bash
 git clone https://github.com/nicomaure/TranscriVoz.git
@@ -164,4 +181,4 @@ TranscriVoz/
 
 ---
 
-Desarrollado por [nicomaure](https://nicomaure.com.ar)
+Desarrollado por [nicomaure](https://nicomaure.com.ar) · [MIT License](LICENSE)
