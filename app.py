@@ -625,7 +625,13 @@ def download_from_url(url, job_dir, job_id):
                 info = ydl.extract_info(url, download=True)
                 title = info.get("title", "youtube_audio")
         except Exception as e:
-            raise RuntimeError(f"Error al descargar de YouTube: {str(e)[:200]}")
+            error_str = str(e)
+            if "Sign in" in error_str or "bot" in error_str or "cookies" in error_str.lower():
+                raise RuntimeError(
+                    "YouTube bloqueo la descarga desde este servidor. "
+                    "Descarga el video desde tu navegador y subilo desde la pestaña Archivo."
+                )
+            raise RuntimeError(f"Error al descargar de YouTube: {error_str[:200]}")
 
         if not os.path.exists(output_path):
             # yt-dlp may have saved with different extension
