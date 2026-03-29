@@ -22,7 +22,8 @@ load_dotenv()
 
 DESKTOP_MODE = os.environ.get("TRANSCRIVOZ_DESKTOP") == "1"
 
-app = Flask(__name__)
+template_dir = os.environ.get("TRANSCRIVOZ_TEMPLATE_DIR")
+app = Flask(__name__, template_folder=template_dir) if template_dir else Flask(__name__)
 if not DESKTOP_MODE:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32).hex())

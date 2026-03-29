@@ -1,0 +1,83 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [windows]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyinstaller flask groq openai python-dotenv yt-dlp gdown
+
+      - name: Download ffmpeg
+        shell: pwsh
+        run: |
+          curl -L -o ffmpeg.zip https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+          7z x ffmpeg.zip -offmpeg_extracted
+          $ffDir = Get-ChildItem -Path ffmpeg_extracted -Directory | Select-Object -First 1
+          Copy-Item "$($ffDir.FullName)\bin\ffmpeg.exe" -Destination .
+          Copy-Item "$($ffDir.FullName)\bin\ffprobe.exe" -Destination .
+
+      - name: Build with PyInstaller
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --name TranscriVoz --console `
+            --add-data "templates;templates" `
+            --add-data "ffmpeg.exe;." `
+            --add-data "ffprobe.exe;." `
+            --hidden-import=engineio.async_drivers.threading `
+            main.py
+
+      - name: Create zip
+        shell: pwsh
+        run: Compress-Archive -Path dist/TranscriVoz/* -DestinationPath TranscriVoz-Windows-x86_64.zip
+
+      - name: Write release notes
+        shell: bash
+        run: |
+          cat > release-notes.md << 'EOF'
+          ## TranscriVoz Windows
+
+          Version de escritorio de TranscriVoz para Windows. Todo incluido, no necesita instalar nada.
+
+          ### Como usar
+
+          1. Descargar `TranscriVoz-Windows-x86_64.zip`
+          2. Extraer el zip en cualquier carpeta
+          3. Ejecutar `TranscriVoz.exe`
+          4. Se abre en tu navegador. Ir a Ajustes y pegar tu API key de [Groq](https://console.groq.com/keys) (gratis) o [OpenAI](https://platform.openai.com/api-keys)
+
+          ### Incluye
+          - Python 3.12
+          - ffmpeg y ffprobe
+          - yt-dlp (descarga desde YouTube)
+          - Todas las dependencias
+
+          ### Requisitos
+          - Windows 10 o 11 (x86_64)
+          - Navegador web (Chrome, Firefox, Edge, etc.)
+          - API key de [Groq](https://console.groq.com/) (gratis) o [OpenAI](https://platform.openai.com/)
+          EOF
+
+      - name: Create or update release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view v1.0.0-windows >/dev/null 2>&1 || \
+            gh release create v1.0.0-windows --target windows --title "TranscriVoz Windows v1.0.0" --notes "building..."
+          gh release upload v1.0.0-windows TranscriVoz-Windows-x86_64.zip --clobber
+          gh release edit v1.0.0-windows --notes-file release-notes.md

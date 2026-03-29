@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TranscriVoz Desktop — entry point for the AppImage version.
+"""TranscriVoz Desktop — entry point for AppImage and Windows builds.
 
 Launches Flask on a local port and opens the default browser.
 No password required in desktop mode.
@@ -14,6 +14,13 @@ import time
 
 # Set desktop mode BEFORE importing app
 os.environ["TRANSCRIVOZ_DESKTOP"] = "1"
+
+# PyInstaller: add bundled binaries (ffmpeg, ffprobe) to PATH
+if getattr(sys, 'frozen', False):
+    bundle_dir = sys._MEIPASS
+    os.environ["PATH"] = bundle_dir + os.pathsep + os.environ.get("PATH", "")
+    # Tell Flask where templates are
+    os.environ["TRANSCRIVOZ_TEMPLATE_DIR"] = os.path.join(bundle_dir, "templates")
 
 
 def find_free_port():
