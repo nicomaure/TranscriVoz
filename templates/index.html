@@ -805,6 +805,12 @@
                     <div class="hint" id="currentKeyHint">
                         {% if has_api_key %}Key configurada{% else %}Sin API key configurada{% endif %}
                     </div>
+                    <div class="hint" id="apiKeyLinks" style="margin-top: 0.5rem;">
+                        Obtener API key gratis:
+                        <a href="https://console.groq.com/keys" target="_blank" rel="noopener" style="color: var(--accent);">Groq</a>
+                        &nbsp;|&nbsp;
+                        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color: var(--accent);">OpenAI</a>
+                    </div>
                 </div>
                 <div class="form-group" id="settingsPasswordGroup" style="display:none">
                     <label>Contraseña (requerida para cambiar la API key)</label>
@@ -1425,7 +1431,7 @@
     </div>
 
     <div class="footer">
-        Desarrollado por <a href="https://nicomaure.com.ar" target="_blank" rel="noopener">nicomaure</a>
+        Desarrollado por <a href="https://nicomaure.com.ar" target="_blank" rel="noopener">nicomaure</a> &middot; <a href="https://github.com/nicomaure/TranscriVoz" target="_blank" rel="noopener">MIT License</a>
     </div>
 </body>
 </html>
