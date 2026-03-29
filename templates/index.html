@@ -996,7 +996,22 @@
                 }
             };
 
-            source.onerror = () => source.close();
+            source.onerror = () => {
+                source.close();
+                // If progress section is visible but no chunks loaded, show error
+                if (document.getElementById('progressSection').style.display === 'block'
+                    && document.getElementById('chunksSection').style.display !== 'block') {
+                    document.getElementById('progressSection').style.display = 'none';
+                    document.getElementById('uploadCard').style.display = 'block';
+                    const btn = document.getElementById('btnSubir');
+                    btn.disabled = false;
+                    btn.textContent = 'Subir y preparar';
+                    const btnUrl = document.getElementById('btnDescargar');
+                    btnUrl.disabled = false;
+                    btnUrl.textContent = 'Descargar y preparar';
+                    showError('Se perdio la conexion con el servidor. Intenta de nuevo.');
+                }
+            };
         }
 
         function showChunkSelector(chunks) {

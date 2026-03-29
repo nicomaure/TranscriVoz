@@ -619,6 +619,7 @@ def download_from_url(url, job_dir, job_id):
             }],
             "quiet": True,
             "no_warnings": True,
+            "socket_timeout": 30,
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -666,16 +667,23 @@ def download_from_url(url, job_dir, job_id):
 
 
 def prepare_job_from_url(job_id, url):
-    """Download from URL then prepare (convert + split)."""
+    """Download from URL then prepare (convert + split).
+    Runs download in a real OS thread to avoid blocking gevent."""
+    import concurrent.futures
     job = jobs[job_id]
     job_dir = job["job_dir"]
 
     try:
-        file_path, filename = download_from_url(url, job_dir, job_id)
+        # Run download in a real thread so it doesn't block gevent worker
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(download_from_url, url, job_dir, job_id)
+            file_path, filename = future.result(timeout=300)
         job["original_path"] = file_path
         job["filename"] = filename
         emit(job_id, "progress", f"Descargado: {filename}", 5)
         prepare_job(job_id)
+    except concurrent.futures.TimeoutError:
+        emit(job_id, "error", message="La descarga tardo demasiado. Intenta subir el archivo manualmente.")
     except Exception as e:
         emit(job_id, "error", message=str(e))
 
