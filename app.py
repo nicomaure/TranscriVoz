@@ -9,6 +9,7 @@ import atexit
 import tempfile
 from pathlib import Path
 from functools import wraps
+from urllib.parse import urlparse
 
 from flask import (
     Flask, request, session, redirect, url_for,
@@ -29,6 +30,13 @@ app = Flask(__name__, template_folder=template_dir) if template_dir else Flask(_
 if not DESKTOP_MODE:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32).hex())
+if not os.environ.get("SECRET_KEY") and not DESKTOP_MODE:
+    import logging
+    logging.warning(
+        "SECRET_KEY no configurado en .env. Se usa una clave aleatoria — "
+        "las sesiones se invalidan en cada reinicio. "
+        "Ejecuta setup.sh o agrega SECRET_KEY al .env."
+    )
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024 * 1024  # 1GB
 # Werkzeug: guardar a disco archivos > 1MB (no en RAM)
 app.config["MAX_FORM_MEMORY_SIZE"] = 1 * 1024 * 1024
@@ -745,7 +753,15 @@ def upload_url():
     if not url:
         return jsonify({"error": "No se envio URL"}), 400
 
-    if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url:
+    try:
+        hostname = urlparse(url).hostname or ""
+    except Exception:
+        hostname = ""
+    allowed = (
+        hostname in ("www.youtube.com", "youtube.com", "youtu.be", "drive.google.com")
+        or hostname.endswith(".youtube.com")
+    )
+    if not allowed:
         return jsonify({"error": "Solo se aceptan links de YouTube o Google Drive"}), 400
 
     job_id = uuid.uuid4().hex[:12]
@@ -818,6 +834,8 @@ def stream(job_id):
         job = jobs[job_id]
         idx = 0
         while True:
+            if job.get("terminated"):
+                return
             messages = job["messages"]
             while idx < len(messages):
                 event = messages[idx]
@@ -892,6 +910,8 @@ def cleanup():
             count += 1
         except Exception:
             pass
+    for job in jobs.values():
+        job["terminated"] = True
     jobs.clear()
     size_mb = total_size / (1024 * 1024)
     return jsonify({"message": f"Limpiado: {count} jobs, {size_mb:.1f} MB liberados"})
