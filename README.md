@@ -163,6 +163,31 @@ sudo nginx -t && sudo systemctl reload nginx
 
 La app queda en `https://tu-dominio/transcriptor/`
 
+## Mantenimiento
+
+YouTube cambia su sistema cada pocas semanas, lo que puede romper la descarga de videos. Cuando veas un error como *"yt-dlp no pudo procesar el video (posiblemente desactualizado)"*, hay que actualizar `yt-dlp`.
+
+### AppImage y Windows
+
+Desde la carpeta del proyecto en tu máquina de desarrollo:
+
+```bash
+cd ~/Documentos/proyectos/TranscriVoz
+git push origin main:desktop && git push origin main:windows
+```
+
+Esto dispara las builds en GitHub Actions. En ~10 minutos los releases se actualizan automáticamente con la última versión de `yt-dlp`. No hace falta cambiar ningún código.
+
+### Servidor (Ubuntu + Nginx)
+
+```bash
+source venv/bin/activate
+pip install -U yt-dlp
+sudo systemctl restart transcriptor
+```
+
+---
+
 ## Estructura
 
 ```
