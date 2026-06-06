@@ -22,6 +22,7 @@ from openai import OpenAI
 load_dotenv()
 
 DESKTOP_MODE = os.environ.get("TRANSCRIVOZ_DESKTOP") == "1"
+DESKTOP_CONFIG_PATH = Path.home() / ".config" / "transcrivoz" / "config.json"
 
 template_dir = os.environ.get("TRANSCRIVOZ_TEMPLATE_DIR")
 app = Flask(__name__, template_folder=template_dir) if template_dir else Flask(__name__)
@@ -65,6 +66,42 @@ config = {
     },
     "model": "whisper-large-v3-turbo",
 }
+
+
+def load_desktop_config():
+    """Load persisted settings from disk (desktop/AppImage mode only)."""
+    if not DESKTOP_CONFIG_PATH.exists():
+        return
+    try:
+        with open(DESKTOP_CONFIG_PATH) as f:
+            saved = json.load(f)
+        for provider, key in saved.get("api_keys", {}).items():
+            if provider in config["api_keys"] and key:
+                config["api_keys"][provider] = key
+        if saved.get("provider") in PROVIDERS:
+            config["provider"] = saved["provider"]
+        if saved.get("model"):
+            config["model"] = saved["model"]
+    except Exception:
+        pass  # Ignore corrupt config file
+
+
+def save_desktop_config():
+    """Persist current settings to disk (desktop/AppImage mode only)."""
+    try:
+        DESKTOP_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(DESKTOP_CONFIG_PATH, "w") as f:
+            json.dump({
+                "api_keys": config["api_keys"],
+                "provider": config["provider"],
+                "model": config["model"],
+            }, f, indent=2)
+    except Exception:
+        pass
+
+
+if DESKTOP_MODE:
+    load_desktop_config()
 
 
 def get_client():
@@ -537,6 +574,9 @@ def update_settings():
             config["model"] = data["model"]
         else:
             return jsonify({"error": "Modelo no valido para este proveedor"}), 400
+
+    if DESKTOP_MODE:
+        save_desktop_config()
 
     return jsonify({
         "message": "Configuracion guardada",
