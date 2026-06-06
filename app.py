@@ -685,8 +685,15 @@ def download_from_url(url, job_dir, job_id):
             error_str = str(e)
             if "Sign in" in error_str or "bot" in error_str or "cookies" in error_str.lower():
                 raise RuntimeError(
-                    "YouTube bloqueo la descarga desde este servidor. "
+                    "YouTube bloqueo la descarga (detecto un bot). "
                     "Descarga el video desde tu navegador y subilo desde la pestaña Archivo."
+                )
+            if "Unsupported URL" in error_str or "Unable to extract" in error_str or "nsig" in error_str or "js" in error_str.lower():
+                raise RuntimeError(
+                    f"yt-dlp no pudo procesar el video (posiblemente desactualizado). "
+                    f"Version actual: {yt_dlp.version.__version__}. "
+                    f"Descarga el video manualmente y subilo desde la pestaña Archivo. "
+                    f"Detalle: {error_str[:150]}"
                 )
             raise RuntimeError(f"Error al descargar de YouTube: {error_str[:200]}")
 
