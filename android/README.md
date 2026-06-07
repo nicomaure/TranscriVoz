@@ -16,7 +16,8 @@ android/
 
 - Seleccionar audio o video local desde Android.
 - Configurar proveedor Groq u OpenAI.
-- Guardar API key localmente en preferencias privadas de la app.
+- Guardar API key localmente cifrada con Android Keystore.
+- Mostrar estado de API key sin exponerla completa y permitir borrarla.
 - Enviar el archivo al endpoint compatible con Whisper.
 - Mostrar progreso basico.
 - Copiar o guardar la transcripcion como `.txt`.
@@ -28,6 +29,10 @@ android/
 - Reintentos avanzados cuando Groq llega al limite.
 - Descarga desde YouTube o Google Drive.
 - Icono final, firma y pipeline de release.
+
+## API keys
+
+La app no incluye claves en el codigo ni requiere un backend propio. Cada usuario carga su API key desde Ajustes y la app la guarda cifrada en el telefono usando una clave administrada por Android Keystore.
 
 ## Como abrir
 

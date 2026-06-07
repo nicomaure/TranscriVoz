@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,7 +89,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Provider(
+enum class Provider(
     val id: String,
     val title: String,
     val keyPrefix: String,
@@ -137,6 +138,7 @@ private data class AppState(
 private fun TranscriVozApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("transcrivoz", Context.MODE_PRIVATE) }
+    val apiKeyStore = remember { ApiKeyStore(context) }
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf(AppState()) }
     var showSettings by remember { mutableStateOf(false) }
@@ -147,7 +149,7 @@ private fun TranscriVozApp() {
         state = state.copy(
             provider = provider,
             model = model.takeIf { saved -> provider.models.any { it.first == saved } } ?: provider.models.first().first,
-            apiKey = prefs.getString("${provider.id}_api_key", "") ?: "",
+            apiKey = apiKeyStore.get(provider.id),
         )
     }
 
@@ -254,15 +256,31 @@ private fun TranscriVozApp() {
     if (showSettings) {
         SettingsDialog(
             state = state,
+            savedApiKeys = Provider.entries.associateWith { apiKeyStore.get(it.id) },
             onDismiss = { showSettings = false },
             onSave = { provider, model, apiKey ->
+                if (apiKey.isBlank()) {
+                    apiKeyStore.delete(provider.id)
+                } else {
+                    apiKeyStore.save(provider.id, apiKey)
+                }
                 prefs.edit()
                     .putString("provider", provider.id)
                     .putString("model", model)
-                    .putString("${provider.id}_api_key", apiKey)
                     .apply()
-                state = state.copy(provider = provider, model = model, apiKey = apiKey, error = "")
+                state = state.copy(
+                    provider = provider,
+                    model = model,
+                    apiKey = apiKeyStore.get(provider.id),
+                    error = "",
+                )
                 showSettings = false
+            },
+            onClear = { provider ->
+                apiKeyStore.delete(provider.id)
+                if (state.provider == provider) {
+                    state = state.copy(apiKey = "", error = "")
+                }
             },
         )
     }
@@ -469,12 +487,14 @@ private fun ResultPanel(
 @Composable
 private fun SettingsDialog(
     state: AppState,
+    savedApiKeys: Map<Provider, String>,
     onDismiss: () -> Unit,
     onSave: (Provider, String, String) -> Unit,
+    onClear: (Provider) -> Unit,
 ) {
     var provider by remember { mutableStateOf(state.provider) }
     var model by remember { mutableStateOf(state.model) }
-    var apiKey by remember { mutableStateOf(state.apiKey) }
+    var apiKey by remember { mutableStateOf(savedApiKeys[state.provider].orEmpty()) }
     var providerExpanded by remember { mutableStateOf(false) }
     var modelExpanded by remember { mutableStateOf(false) }
 
@@ -513,6 +533,7 @@ private fun SettingsDialog(
                                 onClick = {
                                     provider = item
                                     model = item.models.first().first
+                                    apiKey = savedApiKeys[item].orEmpty()
                                     providerExpanded = false
                                 },
                             )
@@ -528,7 +549,28 @@ private fun SettingsDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = darkTextFieldColors(),
+                    visualTransformation = PasswordVisualTransformation(),
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = if (apiKey.isBlank()) "Sin API key guardada" else "Key guardada: ${maskApiKey(apiKey)}",
+                        color = TextMuted,
+                        fontSize = 12.sp,
+                    )
+                    TextButton(
+                        onClick = {
+                            apiKey = ""
+                            onClear(provider)
+                        },
+                        enabled = apiKey.isNotBlank(),
+                    ) {
+                        Text("Borrar", color = if (apiKey.isBlank()) TextMuted else Danger)
+                    }
+                }
 
                 ExposedDropdownMenuBox(
                     expanded = modelExpanded,
@@ -584,6 +626,11 @@ private fun SettingsDialog(
             }
         },
     )
+}
+
+private fun maskApiKey(apiKey: String): String {
+    if (apiKey.length <= 10) return "configurada"
+    return "${apiKey.take(4)}...${apiKey.takeLast(4)}"
 }
 
 @Composable
