@@ -426,6 +426,7 @@ def download_youtube_with_binary(binary_path, url, job_dir):
     cmd = [
         binary_path,
         "--quiet",
+        "--no-progress",
         "--no-playlist",
         "--socket-timeout", "30",
         "--no-warnings",
@@ -927,6 +928,7 @@ def download_from_url(url, job_dir, job_id):
             }],
             "quiet": True,
             "no_warnings": True,
+            "noprogress": True,
             "socket_timeout": 30,
         }
         try:
