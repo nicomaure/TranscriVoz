@@ -96,6 +96,7 @@ enum class Provider(
     val id: String,
     val title: String,
     val keyPrefix: String,
+    val keyUrl: String,
     val endpoint: String,
     val models: List<Pair<String, String>>,
 ) {
@@ -103,6 +104,7 @@ enum class Provider(
         id = "groq",
         title = "Groq (gratis con limite)",
         keyPrefix = "gsk_",
+        keyUrl = "https://console.groq.com/keys",
         endpoint = "https://api.groq.com/openai/v1/audio/transcriptions",
         models = listOf(
             "whisper-large-v3-turbo" to "Whisper v3 Turbo (rapido)",
@@ -113,6 +115,7 @@ enum class Provider(
         id = "openai",
         title = "OpenAI (pago, sin limite)",
         keyPrefix = "sk-",
+        keyUrl = "https://platform.openai.com/api-keys",
         endpoint = "https://api.openai.com/v1/audio/transcriptions",
         models = listOf(
             "whisper-1" to "Whisper v3",
@@ -608,6 +611,21 @@ private fun SettingsDialog(
                         Text("Borrar", color = if (apiKey.isBlank()) TextMuted else Danger)
                     }
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ApiKeyLinkButton(
+                        text = "Crear key Groq",
+                        url = Provider.Groq.keyUrl,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ApiKeyLinkButton(
+                        text = "Crear key OpenAI",
+                        url = Provider.OpenAI.keyUrl,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
 
                 ExposedDropdownMenuBox(
                     expanded = modelExpanded,
@@ -642,7 +660,7 @@ private fun SettingsDialog(
                 }
 
                 Text(
-                    text = "Esta primera version envia archivos locales a ${provider.title}. YouTube, Drive y division automatica quedan para la siguiente etapa.",
+                    text = "La key se guarda cifrada en este telefono. Para audios grandes se intenta dividir automaticamente antes de enviar.",
                     color = TextMuted,
                     fontSize = 12.sp,
                 )
@@ -663,6 +681,26 @@ private fun SettingsDialog(
             }
         },
     )
+}
+
+@Composable
+private fun ApiKeyLinkButton(
+    text: String,
+    url: String,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    OutlinedButton(
+        onClick = {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        },
+        modifier = modifier,
+        border = BorderStroke(1.dp, Border),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Accent),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Text(text, fontSize = 12.sp, maxLines = 1)
+    }
 }
 
 private fun maskApiKey(apiKey: String): String {
@@ -702,7 +740,32 @@ private suspend fun transcribeAudio(
     fileName: String,
     onProgress: (Float, String) -> Unit,
 ): String = withContext(Dispatchers.IO) {
-    onProgress(0.2f, "Abriendo archivo...")
+    val parts = prepareAudioParts(context, uri, fileName, onProgress)
+    try {
+        if (parts.size == 1) {
+            onProgress(0.35f, "Subiendo archivo a ${provider.title}...")
+            return@withContext transcribePreparedPart(provider, apiKey, model, parts.first())
+        }
+
+        val results = mutableListOf<String>()
+        parts.forEachIndexed { index, part ->
+            val baseProgress = 0.4f + (0.5f * index / parts.size.toFloat())
+            onProgress(baseProgress, "Transcribiendo parte ${index + 1} de ${parts.size}...")
+            results.add(transcribePreparedPart(provider, apiKey, model, part).trim())
+        }
+        onProgress(0.95f, "Uniendo transcripcion...")
+        results.filter { it.isNotBlank() }.joinToString("\n\n")
+    } finally {
+        parts.forEach { it.file.delete() }
+    }
+}
+
+private fun transcribePreparedPart(
+    provider: Provider,
+    apiKey: String,
+    model: String,
+    part: PreparedAudioPart,
+): String {
     val boundary = "TranscriVoz-${UUID.randomUUID()}"
     val connection = (URL(provider.endpoint).openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
@@ -714,16 +777,14 @@ private suspend fun transcribeAudio(
         setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
     }
 
-    onProgress(0.35f, "Subiendo archivo a ${provider.title}...")
     BufferedOutputStream(connection.outputStream).use { output ->
         writeTextPart(output, boundary, "model", model)
         writeTextPart(output, boundary, "response_format", "text")
-        writeFilePart(context, output, boundary, "file", fileName, uri)
+        writeFilePart(output, boundary, "file", part.fileName, part.file)
         output.write("--$boundary--\r\n".toByteArray())
         output.flush()
     }
 
-    onProgress(0.72f, "Esperando transcripcion...")
     val code = connection.responseCode
     val body = if (code in 200..299) {
         connection.inputStream.bufferedReader().use { it.readText() }
@@ -736,8 +797,7 @@ private suspend fun transcribeAudio(
         throw RuntimeException(parseApiError(code, body))
     }
 
-    onProgress(0.95f, "Preparando resultado...")
-    body
+    return body
 }
 
 private fun writeTextPart(
@@ -753,20 +813,25 @@ private fun writeTextPart(
 }
 
 private fun writeFilePart(
-    context: Context,
     output: BufferedOutputStream,
     boundary: String,
     name: String,
     fileName: String,
-    uri: Uri,
+    file: java.io.File,
 ) {
-    val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+    val mimeType = when (file.extension.lowercase()) {
+        "m4a", "mp4" -> "audio/mp4"
+        "mp3" -> "audio/mpeg"
+        "wav" -> "audio/wav"
+        "webm" -> "audio/webm"
+        else -> "application/octet-stream"
+    }
     output.write("--$boundary\r\n".toByteArray())
     output.write("Content-Disposition: form-data; name=\"$name\"; filename=\"$fileName\"\r\n".toByteArray())
     output.write("Content-Type: $mimeType\r\n\r\n".toByteArray())
-    context.contentResolver.openInputStream(uri)?.use { input ->
+    file.inputStream().use { input ->
         BufferedInputStream(input).copyTo(output)
-    } ?: throw RuntimeException("No se pudo abrir el archivo seleccionado.")
+    }
     output.write("\r\n".toByteArray())
 }
 
