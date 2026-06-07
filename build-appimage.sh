@@ -53,13 +53,13 @@ cp -r "${SCRIPT_DIR}/templates" "${APP_DEST}/"
 
 # Step 5: Download static ffmpeg
 echo "[5/6] Downloading ffmpeg..."
-FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+FFMPEG_URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
 curl -L -o "${BUILD_DIR}/ffmpeg.tar.xz" "${FFMPEG_URL}"
 cd "${BUILD_DIR}"
 tar xf ffmpeg.tar.xz
-FFMPEG_DIR=$(ls -d ffmpeg-*-amd64-static 2>/dev/null | head -1)
-cp "${BUILD_DIR}/${FFMPEG_DIR}/ffmpeg" "${APPDIR}/usr/bin/"
-cp "${BUILD_DIR}/${FFMPEG_DIR}/ffprobe" "${APPDIR}/usr/bin/"
+FFMPEG_DIR=$(find "${BUILD_DIR}" -maxdepth 1 -type d -name 'ffmpeg-*linux64-gpl*' | head -1)
+cp "${FFMPEG_DIR}/bin/ffmpeg" "${APPDIR}/usr/bin/"
+cp "${FFMPEG_DIR}/bin/ffprobe" "${APPDIR}/usr/bin/"
 
 # Step 6: Create AppRun and desktop integration
 echo "[6/6] Creating AppImage metadata..."

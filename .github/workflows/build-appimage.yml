@@ -50,12 +50,12 @@ jobs:
 
       - name: Download static ffmpeg
         run: |
-          curl -L -o ffmpeg.tar.xz \
-            https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+          curl -L --fail -o ffmpeg.tar.xz \
+            https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz
           tar xf ffmpeg.tar.xz
-          FFMPEG_DIR=$(ls -d ffmpeg-*-amd64-static | head -1)
-          cp "${FFMPEG_DIR}/ffmpeg" TranscriVoz.AppDir/usr/bin/
-          cp "${FFMPEG_DIR}/ffprobe" TranscriVoz.AppDir/usr/bin/
+          FFMPEG_DIR=$(find . -maxdepth 1 -type d -name 'ffmpeg-*linux64-gpl*' | head -1)
+          cp "${FFMPEG_DIR}/bin/ffmpeg" TranscriVoz.AppDir/usr/bin/
+          cp "${FFMPEG_DIR}/bin/ffprobe" TranscriVoz.AppDir/usr/bin/
 
       - name: Create AppRun and metadata
         run: |
