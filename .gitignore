@@ -5,3 +5,4 @@ __pycache__/
 *.sock
 .claude/
 *.AppImage
+guia_publicar_aur.md
