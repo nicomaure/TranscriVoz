@@ -3,6 +3,7 @@ package ar.com.nicomaure.transcrivoz
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -21,8 +22,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -180,9 +183,11 @@ private fun TranscriVozApp() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                    .padding(start = 18.dp, top = 22.dp, end = 18.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Header(onSettings = { showSettings = true })
                 FilePanel(
@@ -249,6 +254,7 @@ private fun TranscriVozApp() {
                         saveFile.launch("${baseName}_transcripcion.txt")
                     },
                 )
+                Footer()
             }
         }
     }
@@ -288,32 +294,63 @@ private fun TranscriVozApp() {
 
 @Composable
 private fun Header(onSettings: () -> Unit) {
-    Row(
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        border = BorderStroke(1.dp, Border),
+        shape = RoundedCornerShape(8.dp),
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
-            Text(
-                text = "TranscriVoz",
-                color = Accent,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 25.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "Audio y video a texto",
-                color = TextMuted,
-                fontSize = 13.sp,
-            )
-        }
-        OutlinedButton(
-            onClick = onSettings,
-            border = BorderStroke(1.dp, Border),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMain),
-            shape = RoundedCornerShape(8.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Ajustes")
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "TranscriVoz",
+                    color = Accent,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 23.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Audio y video a texto",
+                    color = TextMuted,
+                    fontSize = 13.sp,
+                )
+            }
+            OutlinedButton(
+                onClick = onSettings,
+                border = BorderStroke(1.dp, Border),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMain),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Text("Ajustes")
+            }
+        }
+    }
+}
+
+@Composable
+private fun Footer() {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp, bottom = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text("Desarrollado por", color = TextMuted, fontSize = 12.sp)
+        TextButton(
+            onClick = {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://nicomaure.com.ar"))
+                context.startActivity(intent)
+            },
+        ) {
+            Text("nicomaure", color = Accent, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
         }
     }
 }
