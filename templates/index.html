@@ -496,6 +496,74 @@
             margin-top: 0.3rem;
         }
 
+        .settings-section {
+            padding-top: 1rem;
+            margin-top: 1rem;
+            border-top: 1px solid #ffffff12;
+        }
+
+        .settings-section:first-of-type {
+            padding-top: 0;
+            margin-top: 0;
+            border-top: none;
+        }
+
+        .settings-section-title {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--accent);
+            margin-bottom: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .api-key-help {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem;
+            margin-top: 0.65rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .api-key-help a {
+            color: var(--accent);
+            text-decoration: none;
+            border: 1px solid #50e6ff40;
+            border-radius: 6px;
+            padding: 0.25rem 0.55rem;
+            background: #50e6ff0a;
+        }
+
+        .api-key-help a:hover {
+            background: #50e6ff18;
+            border-color: var(--accent);
+        }
+
+        .manual-engine-help {
+            display: none;
+            margin-top: 0.7rem;
+            padding: 0.75rem;
+            border: 1px solid #ffffff18;
+            border-radius: 8px;
+            background: var(--bg);
+            font-size: 0.76rem;
+            color: var(--text-muted);
+        }
+
+        .manual-engine-help a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .manual-engine-help code {
+            display: block;
+            margin-top: 0.35rem;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
         .modal-actions {
             display: flex;
             justify-content: flex-end;
@@ -622,7 +690,6 @@
             <div style="display:flex; gap:0.5rem;">
                 <button class="btn btn-secondary" onclick="openHelp()" title="Ayuda">?</button>
                 <button class="btn btn-secondary" onclick="openSettings()" title="Configuracion">&#9881;</button>
-                <button class="btn btn-secondary" onclick="cleanupFiles()">Limpiar archivos</button>
                 <form method="POST" action="{{ url_for('logout') }}" style="margin:0">
                     <button type="submit" class="btn btn-secondary">Salir</button>
                 </form>
@@ -792,37 +859,64 @@
         <div class="modal-overlay" id="settingsModal">
             <div class="modal">
                 <h3>Configuracion</h3>
-                <div class="form-group">
-                    <label>Proveedor</label>
-                    <select id="settingsProvider" onchange="onProviderChange()">
-                        {% for prov_id, prov in providers.items() %}
-                        <option value="{{ prov_id }}" {% if prov_id == current_provider %}selected{% endif %}>{{ prov.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>API Key</label>
-                    <input type="password" id="settingsApiKey" placeholder="gsk_...">
-                    <div class="hint" id="currentKeyHint">
-                        {% if has_api_key %}Key configurada{% else %}Sin API key configurada{% endif %}
+                <div class="settings-section">
+                    <div class="settings-section-title">Proveedor y API</div>
+                    <div class="form-group">
+                        <label>Proveedor</label>
+                        <select id="settingsProvider" onchange="onProviderChange()">
+                            {% for prov_id, prov in providers.items() %}
+                            <option value="{{ prov_id }}" {% if prov_id == current_provider %}selected{% endif %}>{{ prov.name }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="hint" id="apiKeyLinks" style="margin-top: 0.5rem;">
-                        Obtener API key gratis:
-                        <a href="https://console.groq.com/keys" target="_blank" rel="noopener" style="color: var(--accent);">Groq</a>
-                        &nbsp;|&nbsp;
-                        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color: var(--accent);">OpenAI</a>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="settingsApiKey" placeholder="gsk_...">
+                        <div class="hint" id="currentKeyHint">
+                            {% if has_api_key %}Key configurada{% else %}Sin API key configurada{% endif %}
+                        </div>
+                        <div class="api-key-help">
+                            <span id="apiKeyHelpText">Obtener una API key:</span>
+                            <a id="providerKeyLink" href="https://console.groq.com/keys" target="_blank" rel="noopener">Abrir Groq</a>
+                            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI</a>
+                        </div>
+                    </div>
+                    {% if not desktop_mode %}
+                    <div class="form-group" id="settingsPasswordGroup" style="display:none">
+                        <label>Contraseña (requerida para cambiar la API key)</label>
+                        <input type="password" id="settingsPassword" placeholder="Tu contraseña">
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="settings-section">
+                    <div class="settings-section-title">Transcripcion</div>
+                    <div class="form-group">
+                        <label>Modelo</label>
+                        <select id="settingsModel"></select>
+                        <div class="hint" id="modelHint">Turbo es mas rapido. v3 es mas preciso pero mas lento.</div>
                     </div>
                 </div>
-                {% if not desktop_mode %}
-                <div class="form-group" id="settingsPasswordGroup" style="display:none">
-                    <label>Contraseña (requerida para cambiar la API key)</label>
-                    <input type="password" id="settingsPassword" placeholder="Tu contraseña">
+                <div class="settings-section">
+                    <div class="settings-section-title">Descargas</div>
+                    <div class="form-group">
+                        <label>Motor de YouTube</label>
+                        <div class="hint" id="downloadEngineHint">Consultando version de yt-dlp...</div>
+                        <button class="btn btn-secondary" id="btnUpdateEngine" onclick="updateDownloadEngine()">Actualizar motor</button>
+                        <div class="manual-engine-help" id="manualEngineHelp">
+                            Si Windows o el antivirus bloquea la actualizacion automatica, descarga el motor oficial desde
+                            <a id="manualEngineLink" href="https://github.com/yt-dlp/yt-dlp/releases/latest" target="_blank" rel="noopener">GitHub</a>
+                            y guardalo con este nombre:
+                            <code id="manualEnginePath"></code>
+                        </div>
+                    </div>
                 </div>
-                {% endif %}
-                <div class="form-group">
-                    <label>Modelo de transcripcion</label>
-                    <select id="settingsModel"></select>
-                    <div class="hint" id="modelHint">Turbo es mas rapido. v3 es mas preciso pero mas lento.</div>
+                <div class="settings-section">
+                    <div class="settings-section-title">Mantenimiento</div>
+                    <div class="form-group">
+                        <label>Archivos temporales</label>
+                        <div class="hint">Borra los audios preparados y transcripciones temporales de esta sesion.</div>
+                        <button class="btn btn-secondary" onclick="cleanupFiles()">Limpiar archivos</button>
+                    </div>
                 </div>
                 <div class="settings-msg" id="settingsMsg"></div>
                 <div class="modal-actions">
@@ -1300,6 +1394,7 @@
                 const resp = await fetch(BASE + '/settings');
                 settingsData = await resp.json();
                 document.getElementById('settingsProvider').value = settingsData.provider;
+                updateApiKeyHelp(settingsData.provider);
                 updateModelSelect(settingsData.models, settingsData.model);
                 if (settingsData.has_api_key) {
                     document.getElementById('settingsApiKey').placeholder = settingsData.api_key_masked;
@@ -1308,6 +1403,7 @@
                     document.getElementById('settingsApiKey').placeholder = 'Pega tu API key...';
                     document.getElementById('currentKeyHint').textContent = 'Sin API key configurada';
                 }
+                loadDownloadEngineStatus();
             } catch (err) {}
         }
 
@@ -1323,8 +1419,97 @@
             }
         }
 
+        function updateApiKeyHelp(provider) {
+            const link = document.getElementById('providerKeyLink');
+            const text = document.getElementById('apiKeyHelpText');
+            if (!link || !text) return;
+
+            if (provider === 'openai') {
+                text.textContent = 'Obtener una API key de OpenAI:';
+                link.href = 'https://platform.openai.com/api-keys';
+                link.textContent = 'Abrir OpenAI';
+            } else {
+                text.textContent = 'Obtener una API key gratis de Groq:';
+                link.href = 'https://console.groq.com/keys';
+                link.textContent = 'Abrir Groq';
+            }
+        }
+
+        async function loadDownloadEngineStatus() {
+            const hint = document.getElementById('downloadEngineHint');
+            const manual = document.getElementById('manualEngineHelp');
+            if (!hint) return;
+            if (manual) manual.style.display = 'none';
+
+            try {
+                const resp = await fetch(BASE + '/download-engine');
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'Error');
+                updateManualEngineHelp(data);
+
+                if (data.selected_source === 'actualizado') {
+                    hint.textContent = `Usando yt-dlp actualizado ${data.selected_version}. Incluido: ${data.bundled_version || 'desconocido'}.`;
+                } else if (data.external_version) {
+                    hint.textContent = `Usando yt-dlp incluido ${data.selected_version || 'desconocido'} porque es mas nuevo que el descargado ${data.external_version}.`;
+                } else {
+                    hint.textContent = `Usando yt-dlp incluido ${data.selected_version || 'desconocido'}. Actualizalo si YouTube deja de descargar.`;
+                }
+            } catch (err) {
+                hint.textContent = 'No se pudo consultar la version del motor.';
+            }
+        }
+
+        function updateManualEngineHelp(data) {
+            const link = document.getElementById('manualEngineLink');
+            const path = document.getElementById('manualEnginePath');
+            if (!link || !path || !data) return;
+
+            if (data.manual_download_url) link.href = data.manual_download_url;
+            if (data.expected_path) path.textContent = data.expected_path;
+        }
+
+        function showManualEngineHelp(data) {
+            updateManualEngineHelp(data);
+            const manual = document.getElementById('manualEngineHelp');
+            if (manual) manual.style.display = 'block';
+        }
+
+        async function updateDownloadEngine() {
+            const btn = document.getElementById('btnUpdateEngine');
+            const hint = document.getElementById('downloadEngineHint');
+            const msg = document.getElementById('settingsMsg');
+            const manual = document.getElementById('manualEngineHelp');
+
+            btn.disabled = true;
+            btn.textContent = 'Actualizando...';
+            hint.textContent = 'Descargando la ultima version de yt-dlp...';
+            msg.textContent = '';
+            if (manual) manual.style.display = 'none';
+
+            try {
+                const resp = await fetch(BASE + '/download-engine/update', { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    showManualEngineHelp(data);
+                    throw new Error(data.error || 'Error');
+                }
+
+                hint.textContent = `Usando yt-dlp actualizado ${data.external_version}.`;
+                msg.textContent = data.message;
+                msg.className = 'settings-msg ok';
+            } catch (err) {
+                hint.textContent = 'La actualizacion no se completo.';
+                msg.textContent = err.message + ' Si Windows lo bloqueo, usa la descarga manual de abajo.';
+                msg.className = 'settings-msg err';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Actualizar motor de YouTube';
+            }
+        }
+
         async function onProviderChange() {
             const provider = document.getElementById('settingsProvider').value;
+            updateApiKeyHelp(provider);
             // Save provider first to get updated models
             try {
                 const resp = await fetch(BASE + '/settings', {
@@ -1406,6 +1591,7 @@
                 if (!resp.ok) throw new Error(data.error || 'Error');
                 alert(data.message);
                 resetApp();
+                closeSettings();
             } catch (err) {
                 alert('Error: ' + err.message);
             }
