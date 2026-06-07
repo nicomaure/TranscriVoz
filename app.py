@@ -423,6 +423,7 @@ def find_original_download(job_dir):
 
 def download_youtube_with_binary(binary_path, url, job_dir):
     output_template = os.path.join(job_dir, "original.%(ext)s")
+    ffmpeg_path = shutil.which("ffmpeg")
     cmd = [
         binary_path,
         "--quiet",
@@ -436,8 +437,10 @@ def download_youtube_with_binary(binary_path, url, job_dir):
         "--audio-format", "mp3",
         "--audio-quality", "32K",
         "-o", output_template,
-        url,
     ]
+    if ffmpeg_path:
+        cmd.extend(["--ffmpeg-location", ffmpeg_path])
+    cmd.append(url)
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()
@@ -912,10 +915,10 @@ def download_from_url(url, job_dir, job_id):
         ytdlp_binary = get_ytdlp_binary()
         if ytdlp_binary:
             try:
-                emit(job_id, "progress", "Usando el motor de YouTube mas reciente disponible...", 3)
+                emit(job_id, "progress", "Preparando motor de YouTube...", 3)
                 return download_youtube_with_binary(ytdlp_binary, url, job_dir)
-            except Exception as e:
-                emit(job_id, "progress", f"Motor actualizado fallo, probando motor incluido: {str(e)[:80]}", 3)
+            except Exception:
+                pass
 
         output_path = os.path.join(job_dir, "original.mp3")
         ydl_opts = {
