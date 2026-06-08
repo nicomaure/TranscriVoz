@@ -29,7 +29,6 @@ android/
 
 - Conversion local/comprimida tipo desktop con ffmpeg.
 - Reintentos avanzados cuando Groq llega al limite.
-- Descarga desde YouTube o Google Drive.
 - Icono final, firma y pipeline de release.
 
 ## API keys
