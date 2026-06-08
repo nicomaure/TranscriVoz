@@ -12,6 +12,9 @@ on:
       - ".github/workflows/build-android.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -40,3 +43,14 @@ jobs:
         with:
           name: TranscriVoz-Android-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish Android release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/android'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk TranscriVoz-Android-debug.apk
+          gh release view v0.1.0-android >/dev/null 2>&1 || \
+            gh release create v0.1.0-android --target android --title "TranscriVoz Android v0.1.0" --notes "Build Android debug actualizada automaticamente desde la rama android."
+          gh release upload v0.1.0-android TranscriVoz-Android-debug.apk --clobber
+          gh release edit v0.1.0-android --target android --notes "APK debug de TranscriVoz Android. Esta version esta en desarrollo y todavia no esta publicada en Play Store. Android puede mostrar una advertencia al instalar apps fuera de Play Store."
