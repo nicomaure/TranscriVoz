@@ -24,6 +24,18 @@ Subi un video o audio desde el navegador, o procesa enlaces compatibles sobre co
 
 > Todo viene incluido: Python, ffmpeg y yt-dlp. No necesita instalar dependencias.
 
+### Android
+
+La version Android esta en desarrollo y todavia no esta publicada en Play Store.
+
+1. [**Descargar TranscriVoz para Android**](https://github.com/nicomaure/TranscriVoz/actions/runs/27110059473)
+2. En la seccion **Artifacts**, descargar `TranscriVoz-Android-debug`
+3. Descomprimir el `.zip`
+4. Instalar `app-debug.apk` en el telefono
+5. Android puede mostrar una advertencia porque la app no viene de Play Store. Elegi permitir la instalacion desde esa fuente e instalar de todas formas si confias en este proyecto.
+
+La version Android no incluye claves API. Al abrirla, anda a Ajustes y carga tu propia API key de [Groq](https://console.groq.com/keys) o [OpenAI](https://platform.openai.com/api-keys).
+
 ---
 
 ## Instalacion desde el codigo (alternativa)
