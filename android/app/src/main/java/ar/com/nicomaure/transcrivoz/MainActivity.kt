@@ -44,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
@@ -72,6 +73,7 @@ import java.io.BufferedOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
+import org.json.JSONObject
 
 private val Bg = Color(0xFF0B1020)
 private val SurfaceDark = Color(0xFF121A2E)
@@ -138,6 +140,7 @@ private data class AppState(
     val status: String = "Elegi un archivo de audio o video para empezar.",
     val transcript: String = "",
     val error: String = "",
+    val withTimestamps: Boolean = true,
 )
 
 @Composable
@@ -156,6 +159,7 @@ private fun TranscriVozApp() {
             provider = provider,
             model = model.takeIf { saved -> provider.models.any { it.first == saved } } ?: provider.models.first().first,
             apiKey = apiKeyStore.get(provider.id),
+            withTimestamps = prefs.getBoolean("with_timestamps", true),
         )
     }
 
@@ -225,6 +229,7 @@ private fun TranscriVozApp() {
                                     model = state.model,
                                     uri = uri,
                                     fileName = state.selectedName.ifBlank { "audio.mp3" },
+                                    withTimestamps = state.withTimestamps,
                                 ) { progress, status ->
                                     state = state.copy(progress = progress, status = status)
                                 }
@@ -278,7 +283,7 @@ private fun TranscriVozApp() {
             state = state,
             savedApiKeys = Provider.entries.associateWith { apiKeyStore.get(it.id) },
             onDismiss = { showSettings = false },
-            onSave = { provider, model, apiKey ->
+            onSave = { provider, model, apiKey, withTimestamps ->
                 if (apiKey.isBlank()) {
                     apiKeyStore.delete(provider.id)
                 } else {
@@ -287,11 +292,13 @@ private fun TranscriVozApp() {
                 prefs.edit()
                     .putString("provider", provider.id)
                     .putString("model", model)
+                    .putBoolean("with_timestamps", withTimestamps)
                     .apply()
                 state = state.copy(
                     provider = provider,
                     model = model,
                     apiKey = apiKeyStore.get(provider.id),
+                    withTimestamps = withTimestamps,
                     error = "",
                 )
                 showSettings = false
@@ -431,7 +438,7 @@ private fun FilePanel(
                 Text(if (state.busy) "Transcribiendo..." else "Transcribir")
             }
             Text(
-                text = "Proveedor: ${state.provider.title} | Modelo: ${state.model}",
+                text = "Proveedor: ${state.provider.title} | Modelo: ${state.model} | ${if (state.withTimestamps) "Con tiempos" else "Solo texto"}",
                 color = TextMuted,
                 fontSize = 12.sp,
             )
@@ -550,12 +557,13 @@ private fun SettingsDialog(
     state: AppState,
     savedApiKeys: Map<Provider, String>,
     onDismiss: () -> Unit,
-    onSave: (Provider, String, String) -> Unit,
+    onSave: (Provider, String, String, Boolean) -> Unit,
     onClear: (Provider) -> Unit,
 ) {
     var provider by remember { mutableStateOf(state.provider) }
     var model by remember { mutableStateOf(state.model) }
     var apiKey by remember { mutableStateOf(savedApiKeys[state.provider].orEmpty()) }
+    var withTimestamps by remember { mutableStateOf(state.withTimestamps) }
     var providerExpanded by remember { mutableStateOf(false) }
     var modelExpanded by remember { mutableStateOf(false) }
 
@@ -666,6 +674,25 @@ private fun SettingsDialog(
                     }
                 }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Mostrar tiempos", color = TextMain, fontSize = 14.sp)
+                        Text(
+                            text = if (withTimestamps) "[00:01] texto..." else "Texto continuo sin marcas",
+                            color = TextMuted,
+                            fontSize = 12.sp,
+                        )
+                    }
+                    Switch(
+                        checked = withTimestamps,
+                        onCheckedChange = { withTimestamps = it },
+                    )
+                }
+
                 Text(
                     text = "La key se guarda cifrada en este telefono. Para audios grandes se intenta dividir automaticamente antes de enviar.",
                     color = TextMuted,
@@ -675,7 +702,7 @@ private fun SettingsDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onSave(provider, model, apiKey) },
+                onClick = { onSave(provider, model, apiKey, withTimestamps) },
                 colors = ButtonDefaults.buttonColors(containerColor = AccentStrong, contentColor = Color.White),
                 shape = RoundedCornerShape(8.dp),
             ) {
@@ -748,20 +775,21 @@ private suspend fun transcribeAudio(
     model: String,
     uri: Uri,
     fileName: String,
+    withTimestamps: Boolean,
     onProgress: (Float, String) -> Unit,
 ): String = withContext(Dispatchers.IO) {
     val parts = prepareAudioParts(context, uri, fileName, onProgress)
     try {
         if (parts.size == 1) {
             onProgress(0.35f, "Subiendo archivo a ${provider.title}...")
-            return@withContext transcribePreparedPart(provider, apiKey, model, parts.first())
+            return@withContext transcribePreparedPart(provider, apiKey, model, parts.first(), withTimestamps)
         }
 
         val results = mutableListOf<String>()
         parts.forEachIndexed { index, part ->
             val baseProgress = 0.4f + (0.5f * index / parts.size.toFloat())
             onProgress(baseProgress, "Transcribiendo parte ${index + 1} de ${parts.size}...")
-            results.add(transcribePreparedPart(provider, apiKey, model, part).trim())
+            results.add(transcribePreparedPart(provider, apiKey, model, part, withTimestamps).trim())
         }
         onProgress(0.95f, "Uniendo transcripcion...")
         results.filter { it.isNotBlank() }.joinToString("\n\n")
@@ -775,6 +803,7 @@ private fun transcribePreparedPart(
     apiKey: String,
     model: String,
     part: PreparedAudioPart,
+    withTimestamps: Boolean,
 ): String {
     val boundary = "TranscriVoz-${UUID.randomUUID()}"
     val connection = (URL(provider.endpoint).openConnection() as HttpURLConnection).apply {
@@ -789,7 +818,11 @@ private fun transcribePreparedPart(
 
     BufferedOutputStream(connection.outputStream).use { output ->
         writeTextPart(output, boundary, "model", model)
-        writeTextPart(output, boundary, "response_format", "text")
+        writeTextPart(output, boundary, "language", "es")
+        writeTextPart(output, boundary, "response_format", if (withTimestamps) "verbose_json" else "text")
+        if (provider == Provider.Groq) {
+            writeTextPart(output, boundary, "temperature", "0")
+        }
         writeFilePart(output, boundary, "file", part.fileName, part.file)
         output.write("--$boundary--\r\n".toByteArray())
         output.flush()
@@ -807,7 +840,41 @@ private fun transcribePreparedPart(
         throw RuntimeException(parseApiError(code, body))
     }
 
-    return body
+    return if (withTimestamps) {
+        formatVerboseTranscript(body, part.offsetSeconds)
+    } else {
+        body
+    }
+}
+
+private fun formatVerboseTranscript(body: String, offsetSeconds: Double): String {
+    val json = JSONObject(body)
+    val segments = json.optJSONArray("segments")
+    if (segments == null || segments.length() == 0) {
+        return json.optString("text", body)
+    }
+
+    val lines = mutableListOf<String>()
+    for (index in 0 until segments.length()) {
+        val segment = segments.optJSONObject(index) ?: continue
+        val text = segment.optString("text").trim()
+        if (text.isBlank()) continue
+        val start = segment.optDouble("start", 0.0) + offsetSeconds
+        lines.add("[${formatTimestamp(start)}] $text")
+    }
+    return lines.joinToString("\n")
+}
+
+private fun formatTimestamp(seconds: Double): String {
+    val totalSeconds = seconds.toInt().coerceAtLeast(0)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val secs = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, secs)
+    } else {
+        "%02d:%02d".format(minutes, secs)
+    }
 }
 
 private fun writeTextPart(

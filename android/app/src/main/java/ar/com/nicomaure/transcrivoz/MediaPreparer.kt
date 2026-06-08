@@ -19,6 +19,7 @@ const val MAX_API_FILE_BYTES = 19L * 1024L * 1024L
 data class PreparedAudioPart(
     val file: File,
     val fileName: String,
+    val offsetSeconds: Double = 0.0,
 )
 
 suspend fun prepareAudioParts(
@@ -94,7 +95,13 @@ private fun splitMediaFile(
             output.delete()
             throw RuntimeException("una parte sigue superando 19 MB")
         }
-        parts.add(PreparedAudioPart(output, "${baseName}_parte_${index + 1}.m4a"))
+        parts.add(
+            PreparedAudioPart(
+                file = output,
+                fileName = "${baseName}_parte_${index + 1}.m4a",
+                offsetSeconds = startUs / 1_000_000.0,
+            )
+        )
     }
 
     source.delete()

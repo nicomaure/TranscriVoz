@@ -20,6 +20,7 @@ android/
 - Mostrar estado de API key sin exponerla completa y permitir borrarla.
 - Links directos para crear API keys de Groq y OpenAI.
 - Division automatica experimental para archivos grandes usando APIs nativas de Android.
+- Formato de salida configurable: con timestamps o solo texto.
 - Enviar el archivo al endpoint compatible con Whisper.
 - Mostrar progreso basico.
 - Copiar o guardar la transcripcion como `.txt`.
@@ -38,6 +39,10 @@ La app no incluye claves en el codigo ni requiere un backend propio. Cada usuari
 ## Archivos grandes
 
 La app intenta dividir archivos mayores a 19 MB antes de enviarlos a Groq/OpenAI. Esta primera implementacion usa `MediaExtractor` y `MediaMuxer`, por lo que funciona mejor con contenedores compatibles con Android como M4A/MP4/AAC. La conversion y compresion equivalente a la version desktop queda pendiente para una etapa posterior.
+
+## Timestamps
+
+Desde Ajustes se puede elegir entre transcripcion con tiempos (`[MM:SS] texto`) o solo texto. Cuando el archivo se divide en partes, la app suma el offset de cada parte para que los tiempos sigan la duracion total del audio.
 
 ## Como abrir
 
