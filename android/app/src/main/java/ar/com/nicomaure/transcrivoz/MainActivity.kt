@@ -256,6 +256,17 @@ private fun TranscriVozApp() {
                         val baseName = state.selectedName.substringBeforeLast('.', "transcripcion")
                         saveFile.launch("${baseName}_transcripcion.txt")
                     },
+                    onNew = {
+                        state = state.copy(
+                            selectedUri = null,
+                            selectedName = "",
+                            busy = false,
+                            progress = 0f,
+                            status = "Elegi un archivo de audio o video para empezar.",
+                            transcript = "",
+                            error = "",
+                        )
+                    },
                 )
                 Footer()
             }
@@ -468,6 +479,7 @@ private fun ResultPanel(
     transcript: String,
     onCopy: () -> Unit,
     onSave: () -> Unit,
+    onNew: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
@@ -479,30 +491,39 @@ private fun ResultPanel(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Text("Resultado", color = Accent, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Resultado", color = Accent, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = onCopy,
-                        enabled = transcript.isNotBlank(),
-                        border = BorderStroke(1.dp, Border),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMain),
-                        shape = RoundedCornerShape(8.dp),
-                    ) {
-                        Text("Copiar")
-                    }
-                    Button(
-                        onClick = onSave,
-                        enabled = transcript.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentStrong, contentColor = Color.White),
-                        shape = RoundedCornerShape(8.dp),
-                    ) {
-                        Text("Guardar")
-                    }
+                OutlinedButton(
+                    onClick = onNew,
+                    enabled = transcript.isNotBlank(),
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, Border),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMain),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text("Nuevo", fontSize = 12.sp, maxLines = 1)
+                }
+                OutlinedButton(
+                    onClick = onCopy,
+                    enabled = transcript.isNotBlank(),
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, Border),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMain),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text("Copiar", fontSize = 12.sp, maxLines = 1)
+                }
+                Button(
+                    onClick = onSave,
+                    enabled = transcript.isNotBlank(),
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentStrong, contentColor = Color.White),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text("Guardar", fontSize = 12.sp, maxLines = 1)
                 }
             }
             Box(
@@ -611,21 +632,7 @@ private fun SettingsDialog(
                         Text("Borrar", color = if (apiKey.isBlank()) TextMuted else Danger)
                     }
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    ApiKeyLinkButton(
-                        text = "Crear key Groq",
-                        url = Provider.Groq.keyUrl,
-                        modifier = Modifier.weight(1f),
-                    )
-                    ApiKeyLinkButton(
-                        text = "Crear key OpenAI",
-                        url = Provider.OpenAI.keyUrl,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                ApiKeyLinkButton(provider = provider)
 
                 ExposedDropdownMenuBox(
                     expanded = modelExpanded,
@@ -685,22 +692,25 @@ private fun SettingsDialog(
 
 @Composable
 private fun ApiKeyLinkButton(
-    text: String,
-    url: String,
-    modifier: Modifier = Modifier,
+    provider: Provider,
 ) {
     val context = LocalContext.current
     OutlinedButton(
         onClick = {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(provider.keyUrl)))
         },
-        modifier = modifier,
+        modifier = Modifier.fillMaxWidth(),
         border = BorderStroke(1.dp, Border),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Accent),
         shape = RoundedCornerShape(8.dp),
     ) {
-        Text(text, fontSize = 12.sp, maxLines = 1)
+        Text("Crear key de ${provider.displayName()}", fontSize = 12.sp, maxLines = 1)
     }
+}
+
+private fun Provider.displayName(): String = when (this) {
+    Provider.Groq -> "Groq"
+    Provider.OpenAI -> "OpenAI"
 }
 
 private fun maskApiKey(apiKey: String): String {
