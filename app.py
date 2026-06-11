@@ -1,8 +1,12 @@
 import os
 import re
 import uuid
+import time
 import shutil
 import hashlib
+import hmac
+import glob
+import threading
 import subprocess
 import json
 import atexit
@@ -49,7 +53,7 @@ def get_ytdlp_download_url():
 template_dir = os.environ.get("TRANSCRIVOZ_TEMPLATE_DIR")
 app = Flask(__name__, template_folder=template_dir) if template_dir else Flask(__name__)
 if not DESKTOP_MODE:
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32).hex())
 if not os.environ.get("SECRET_KEY") and not DESKTOP_MODE:
     import logging
@@ -164,7 +168,7 @@ def check_password(password):
     h = hashlib.pbkdf2_hmac(
         "sha256", password.encode(), b"transcriptor-groq", 100000
     ).hex()
-    return h == PASSWORD_HASH
+    return hmac.compare_digest(h, PASSWORD_HASH)
 
 
 # Brute force protection
@@ -222,6 +226,8 @@ def get_session_owner():
 def create_job(job_id, **data):
     job = {
         "owner_id": get_session_owner(),
+        "created_at": time.time(),
+        "last_activity": time.time(),
         "messages": [],
         "result": None,
         "prepared": False,
@@ -255,6 +261,7 @@ def emit(job_id, event_type, message="", percent=0, text="", **extra):
         return
     event = {"type": event_type, "message": message, "percent": percent, "text": text}
     event.update(extra)
+    jobs[job_id]["last_activity"] = time.time()
     jobs[job_id]["messages"].append(event)
 
 
@@ -1202,7 +1209,6 @@ def cleanup():
 
 def cleanup_old_jobs():
     """Remove temp directories for any leftover jobs"""
-    import glob
     for d in glob.glob(os.path.join(TEMP_DIR, "transcriptor-*")):
         try:
             shutil.rmtree(d, ignore_errors=True)
@@ -1211,6 +1217,54 @@ def cleanup_old_jobs():
 
 
 atexit.register(cleanup_old_jobs)
+
+
+# Background janitor: avoid RAM/disk growth on long-running servers.
+JOB_TTL = 3 * 3600          # jobs sin actividad por mas de esto se descartan
+JANITOR_INTERVAL = 30 * 60  # cada cuanto corre la limpieza
+
+
+def reap_expired_jobs():
+    """Remove in-memory jobs and their temp dirs once idle longer than JOB_TTL.
+
+    Uses last_activity (updated on every emit), not created_at: a job stuck
+    waiting out API rate limits emits progress every 10s and stays alive.
+    """
+    now = time.time()
+    for job_id, job in list(jobs.items()):
+        idle = now - job.get("last_activity", job.get("created_at", now))
+        if idle < JOB_TTL:
+            continue
+        job["terminated"] = True
+        job_dir = job.get("job_dir", "")
+        if job_dir and os.path.isdir(job_dir):
+            shutil.rmtree(job_dir, ignore_errors=True)
+        jobs.pop(job_id, None)
+
+    # Carpetas huerfanas (de procesos anteriores), nunca las de jobs vivos
+    active_dirs = {job.get("job_dir") for job in jobs.values()}
+    cutoff = now - JOB_TTL
+    for d in glob.glob(os.path.join(TEMP_DIR, "transcriptor-*")):
+        if d in active_dirs:
+            continue
+        try:
+            if os.path.getmtime(d) < cutoff:
+                shutil.rmtree(d, ignore_errors=True)
+        except Exception:
+            pass
+
+
+def _janitor_loop():
+    while True:
+        time.sleep(JANITOR_INTERVAL)
+        try:
+            reap_expired_jobs()
+        except Exception:
+            pass
+
+
+if not DESKTOP_MODE:
+    threading.Thread(target=_janitor_loop, daemon=True).start()
 
 
 if __name__ == "__main__":
