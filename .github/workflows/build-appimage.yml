@@ -16,8 +16,15 @@ jobs:
 
       - name: Download portable Python
         run: |
-          curl -L -o python.AppImage \
-            https://github.com/niess/python-appimage/releases/download/python3.12/python3.12.12-cp312-cp312-manylinux2014_x86_64.AppImage
+          PY_URL=$(curl -sL --fail https://api.github.com/repos/niess/python-appimage/releases/tags/python3.12 \
+            | grep -o '"browser_download_url": *"[^"]*cp312-cp312-manylinux2014_x86_64\.AppImage"' \
+            | head -1 | cut -d'"' -f4)
+          if [ -z "$PY_URL" ]; then
+            echo "No se pudo resolver la URL de Python portable" >&2
+            exit 1
+          fi
+          echo "Descargando: $PY_URL"
+          curl -L --fail -o python.AppImage "$PY_URL"
           chmod +x python.AppImage
 
       - name: Extract Python and set up AppDir

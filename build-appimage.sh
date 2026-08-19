@@ -7,7 +7,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="/tmp/transcrivoz-appimage-build"
 APPDIR="${BUILD_DIR}/${APP_NAME}.AppDir"
 PYTHON_VERSION="3.12"
-PYTHON_APPIMAGE_URL="https://github.com/niess/python-appimage/releases/download/python3.12/python3.12.12-cp312-cp312-manylinux2014_x86_64.AppImage"
 
 echo "=== Building ${APP_NAME} AppImage ==="
 
@@ -16,9 +15,18 @@ rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}"
 
 # Step 1: Download Python AppImage (portable Python)
+# Resolve the current asset URL instead of pinning an exact patch version,
+# ya que python-appimage borra releases viejas al publicar una nueva patch.
 echo "[1/6] Downloading portable Python ${PYTHON_VERSION}..."
+PYTHON_APPIMAGE_URL=$(curl -sL --fail https://api.github.com/repos/niess/python-appimage/releases/tags/python3.12 \
+    | grep -o '"browser_download_url": *"[^"]*cp312-cp312-manylinux2014_x86_64\.AppImage"' \
+    | head -1 | cut -d'"' -f4)
+if [ -z "${PYTHON_APPIMAGE_URL}" ]; then
+    echo "ERROR: no se pudo resolver la URL de Python portable" >&2
+    exit 1
+fi
 PYTHON_AI="${BUILD_DIR}/python.AppImage"
-curl -L -o "${PYTHON_AI}" "${PYTHON_APPIMAGE_URL}"
+curl -L --fail -o "${PYTHON_AI}" "${PYTHON_APPIMAGE_URL}"
 chmod +x "${PYTHON_AI}"
 
 # Step 2: Extract Python AppImage into our AppDir
