@@ -36,11 +36,12 @@ cd "${BUILD_DIR}"
 mv squashfs-root "${APPDIR}"
 
 # Clean up Python AppImage artifacts (AppRun is a symlink, desktop file, etc.)
+# Usar globs: el nombre incluye el patch version, que cambia con cada release.
 rm -f "${APPDIR}/AppRun"  # Remove symlink to usr/bin/python3.12
-rm -f "${APPDIR}/python3.12.12.desktop"
-rm -f "${APPDIR}/python3.12.12.svg" "${APPDIR}/python3.12.12.png" 2>/dev/null
+rm -f "${APPDIR}"/python3.12.*.desktop
+rm -f "${APPDIR}"/python3.12.*.svg "${APPDIR}"/python3.12.*.png 2>/dev/null
 rm -f "${APPDIR}/python.png" 2>/dev/null
-rm -f "${APPDIR}/usr/share/metainfo/python3.12.12.appdata.xml" 2>/dev/null
+rm -f "${APPDIR}"/usr/share/metainfo/python3.12.*.appdata.xml 2>/dev/null
 rm -f "${APPDIR}/usr/bin/python" "${APPDIR}/usr/bin/python3" "${APPDIR}/usr/bin/python3.12"
 rm -f "${APPDIR}/.DirIcon" 2>/dev/null
 

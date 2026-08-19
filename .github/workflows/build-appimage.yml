@@ -32,12 +32,13 @@ jobs:
           ./python.AppImage --appimage-extract
           mv squashfs-root TranscriVoz.AppDir
 
-          # Clean Python AppImage artifacts
+          # Clean Python AppImage artifacts (usar globs: el nombre incluye
+          # el patch version, que cambia con cada release de python-appimage)
           rm -f TranscriVoz.AppDir/AppRun
-          rm -f TranscriVoz.AppDir/python3.12.12.desktop
-          rm -f TranscriVoz.AppDir/python3.12.12.svg TranscriVoz.AppDir/python3.12.12.png
+          rm -f TranscriVoz.AppDir/python3.12.*.desktop
+          rm -f TranscriVoz.AppDir/python3.12.*.svg TranscriVoz.AppDir/python3.12.*.png
           rm -f TranscriVoz.AppDir/python.png
-          rm -f TranscriVoz.AppDir/usr/share/metainfo/python3.12.12.appdata.xml
+          rm -f TranscriVoz.AppDir/usr/share/metainfo/python3.12.*.appdata.xml
           rm -f TranscriVoz.AppDir/usr/bin/python TranscriVoz.AppDir/usr/bin/python3 TranscriVoz.AppDir/usr/bin/python3.12
           rm -f TranscriVoz.AppDir/.DirIcon
 
