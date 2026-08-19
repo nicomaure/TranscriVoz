@@ -268,7 +268,7 @@ def emit(job_id, event_type, message="", percent=0, text="", **extra):
 def run_media_command(cmd, timeout, action):
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout
+            cmd, capture_output=True, text=True, errors="replace", timeout=timeout
         )
     except FileNotFoundError:
         raise RuntimeError(
@@ -312,7 +312,7 @@ def format_duration(seconds):
 def convert_to_mp3(input_path, output_path, job_id):
     emit(job_id, "progress", "Convirtiendo audio...", 5)
     run_media_command(
-        ["ffmpeg", "-y", "-i", input_path,
+        ["ffmpeg", "-y", "-nostdin", "-i", input_path, "-vn",
          "-ar", "16000", "-ac", "1", "-b:a", "32k", output_path],
         timeout=600,
         action="ffmpeg al convertir el archivo"
@@ -340,7 +340,7 @@ def split_audio(mp3_path, job_dir, job_id):
         start = i * chunk_duration
         chunk_path = os.path.join(job_dir, f"chunk_{i:03d}.mp3")
         run_media_command(
-            ["ffmpeg", "-y", "-i", mp3_path,
+            ["ffmpeg", "-y", "-nostdin", "-i", mp3_path,
              "-ss", str(start), "-t", str(chunk_duration),
              "-acodec", "copy", chunk_path],
             timeout=300,
@@ -448,7 +448,7 @@ def download_youtube_with_binary(binary_path, url, job_dir):
     if ffmpeg_path:
         cmd.extend(["--ffmpeg-location", ffmpeg_path])
     cmd.append(url)
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    result = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=300)
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()
         raise RuntimeError(detail[:300] or "yt-dlp no pudo descargar el video")
